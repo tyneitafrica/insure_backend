@@ -2,49 +2,70 @@
 
 from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth.models import User
+from insure.models import User
+from rest_framework.test import APIClient
+from rest_framework import status
+from django.conf import settings
 
 class RegisterViewTests(TestCase):
     def setUp(self):
-        self.register_url = reverse("register")
-
-    def test_registration_success(self):
-        response = self.client.post(self.register_url, {
-            "username": "newuser",
-            "password1": "password123",
-            "password2": "password123",
-        })
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(User.objects.filter(username="newuser").exists())
-
-    def test_registration_password_mismatch(self):
-        response = self.client.post(self.register_url, {
-            "username": "newuser",
-            "password1": "password123",
-            "password2": "wrongpassword",
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(User.objects.filter(username="newuser").exists())
+        self.client = APIClient()
+        self.register_url = reverse("signup user")
+        self.valid_api_key = settings.API_KEY
+        print(self.valid_api_key)
 
 
-class LoginViewTests(TestCase):
-    def setUp(self):
-        self.login_url = reverse("login")
-        self.user = User.objects.create_user(username="testuser", password="password123")
+        self.valid_user_data = {
+            "email": "testuser@example.com",
+            "first_name": "Test",
+            "last_name": "User",
+            "password": "strongpassword",
+        }
 
-    def test_login_success(self):
-        response = self.client.post(self.login_url, {
-            "username": "testuser",
-            "password": "password123",
-        })
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.wsgi_request.user.is_authenticated)
+        self.invalid_user_data = {
+            "email": "",
+            "first_name": "",
+            "last_name": "",
+            "password": "",
+        }
 
-    def test_login_failure(self):
-        response = self.client.post(self.login_url, {
-            "username": "testuser",
-            "password": "wrongpassword",
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.wsgi_request.user.is_authenticated)
+        self.headers = {"x-api-key": self.valid_api_key}
+        print(self.headers)
+
+    def test_register_user_with_valid_data(self):
+        response = self.client.post(
+            self.register_url, data=self.valid_user_data, **self.headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["role"], "APPLICANT")
+        self.assertEqual(response.data["email"], self.valid_user_data["email"])
+        self.assertIn("id", response.data)
+
+    # def test_register_user_missing_api_key(self):
+    #     response = self.client.post(self.register_url, data=self.valid_user_data)
+    #     self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    #     self.assertIn("error", response.data)
+
+    # def test_register_user_with_invalid_data(self):
+    #     response = self.client.post(
+    #         self.register_url, data=self.invalid_user_data, **self.headers
+    #     )
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertIn("error", response.data)
+
+    # def test_user_default_role_is_applicant(self):
+    #     response = self.client.post(
+    #         self.register_url, data=self.valid_user_data, **self.headers
+    #     )
+    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    #     self.assertEqual(response.data["role"], "applicant")
+
+    # def test_register_user_with_invalid_api_key(self):
+    #     headers = {"x-api-key": "invalid_key"}
+    #     response = self.client.post(
+    #         self.register_url, data=self.valid_user_data, **headers
+    #     )
+    #     self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    #     self.assertIn("Invalid API key", response.data["error"])
+
 

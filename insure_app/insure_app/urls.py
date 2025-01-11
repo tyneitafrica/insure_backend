@@ -16,7 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from insure.views import *
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    path("api/v1.0/applicant/signup/", SignupUser.as_view(),name="signup user"),
+    
+    # login applicant
+    path("api/v1.0/applicant/login/", LoginApplicant.as_view(), name="login applicant"),
+
 ]

@@ -26,6 +26,8 @@ SECRET_KEY = 'django-insecure-9+sp99s#p1#=5wyv)0&po206l8kw=ixjzcq)($%$&_!*ffqn7p
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+API_KEY = config('API_KEY')
+print(API_KEY)
 
 ALLOWED_HOSTS = ['*']
 
@@ -56,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'insure.middleware.ApiKeyMiddleware',
 ]
 
 ROOT_URLCONF = 'insure_app.urls'
@@ -148,6 +151,7 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+AUTH_USER_MODEL = "insure.User"  # register the User table that will act as a connection between the diffrent user
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
