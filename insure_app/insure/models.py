@@ -47,52 +47,89 @@ class User(AbstractUser):
 # set up the receivor 
 @receiver(post_save, sender=User)
 def create_employer_profile(sender, instance, created, **kwargs):
-    if created and instance.role == User.Role.APPLICANT :
-        Applicant.objects.create(user=instance)
+    if created:
+        if instance.role == User.Role.APPLICANT:
+            Applicant.objects.create(user=instance)
+        elif instance.role == User.Role.ORGANISATION :
+            Organisation.objects.create(user=instance)
 
 class Applicant(models.Model):
+    gender_choices = [
+        ( "Male","Male"),
+        ("Female","Female")
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='insurance_applicant')
     phoneNumber = models.CharField(max_length=20)
     yob = models.DateField(null=True,blank=True)
+    id_no = models.CharField(max_length=20,unique=True)
     age = models.CharField(max_length=20) #will add a calculator to calculate the age
     occupation = models.CharField(max_length=100)
+    gender = models.CharField(choices=gender_choices,max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def calculate_age(self):
+        today = timezone.now().date()
+        born = self.yob
+        age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+        return age
+
+    def __str__(self):
+        return f"{self.user},{self.phoneNumber},{self.yob},{self.id_no},{self.age},{self.occupation},{self.gender}"
 
 
-@receiver(post_save, sender=User)
-def create_employer_profile(sender, instance, created, **kwargs):
-    if created and instance.role == User.Role.ORGANISATION :
-        Organisation.objects.create(user=instance)
 
 class Organisation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organisation')
     companyName = models.CharField(max_length=100)
     phoneNumber = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.companyName},{self.phoneNumber}"
 
 
 class Insurance(models.Model):
-    duration_choices = [
-        ('1 year',  '1 year'),
-        ('2 years', '2 years'),
-        ('3 years', '3 years'),
-        ('4 years', '4 years'),
-        ('5 years', '5 years'),
-    ]
-    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='insurance')
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='insurance',null=True,blank=True)
+    insurance_type = models.CharField(max_length=100) #can be either motor,health,etc..
     title = models.CharField(max_length=100)
+    cover_type = models.CharField(max_length=100) #can be comprehensive,third_party,etc...
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    duration = models.CharField(choices=duration_choices, max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return f"{self.title},{self.insurance_type},{self.cover_type},{self.description},{self.price}"
+
+
+class Benefit(models.Model):
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='benefits')
+    lmit_of_liability = models.CharField(max_length=100)
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2) #to be based on the rate choosen or the liablity of benefit choosen
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.lmit_of_liability},{self.rate},{self.price}"
 
 class Policy(models.Model):
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='applicant')
     insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='insurance_policy')
-    policy_number = models.CharField(max_length=20)
+    benefit = models.ForeignKey(Benefit,on_delete=models.CASCADE,related_name='benefits')
     start_date = models.DateField()
     end_date = models.DateField() #based on the duration choosen will be calculated from there
-    premium = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20)
+    duration = models.DecimalField(max_digits=10, decimal_places=2,default=1) 
     isActive = models.BooleanField(default=True) # to be used to check if the policy is active or not
-    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return f"{self.applicant},{self.insurance},{self.start_date},{self.end_date},{self.duration},{self.isActive}"
 
+# proceed to payment
+class Payment(models.Model):
+    policy = models.ForeignKey(Policy,on_delete=models.CASCADE)
+    # to add the other details below 
