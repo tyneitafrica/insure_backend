@@ -29,14 +29,14 @@ class InsuranceAdmin(admin.ModelAdmin):
 admin.site.register(Insurance, InsuranceAdmin)
 
 class PolicyAdmin(admin.ModelAdmin):
-    list_display  = ('applicant', 'insurance', 'start_date', 'end_date', 'duration', 'isActive', 'created_at', 'updated_at')
+    list_display  = ('applicant', 'insurance', 'start_date', 'end_date', 'duration', 'created_at', 'updated_at')
     search_fields = ('applicant', 'insurance')
-    list_filter   = ('isActive', 'created_at', 'updated_at')
+    list_filter   = ('created_at', 'updated_at')
 
 admin.site.register(Policy, PolicyAdmin)
 
 class BenefitsAdmin(admin.ModelAdmin):
-    list_display  = ('insurance', 'lmit_of_liability', 'rate', 'price', 'created_at', 'updated_at')
+    list_display  = ('insurance', 'limit_of_liability', 'rate', 'price', 'created_at', 'updated_at')
     search_fields = ('insurance', 'lmit_of_liability')
     list_filter   = ('created_at', 'updated_at')
 

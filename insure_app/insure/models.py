@@ -105,29 +105,42 @@ class Insurance(models.Model):
 
 
 class Benefit(models.Model):
-    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='benefits')
-    lmit_of_liability = models.CharField(max_length=100)
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name="benefits")
+    limit_of_liability = models.CharField(max_length=100)
     rate = models.DecimalField(max_digits=10, decimal_places=2)
-    price = models.DecimalField(max_digits=10, decimal_places=2) #to be based on the rate choosen or the liablity of benefit choosen
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
-        return f"{self.lmit_of_liability},{self.rate},{self.price}"
+        return f"{self.limit_of_liability} - {self.price}"
 
 class Policy(models.Model):
-    applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='applicant')
-    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='insurance_policy')
-    benefit = models.ForeignKey(Benefit,on_delete=models.CASCADE,related_name='benefits')
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("ACTIVE", "Active"),
+        ("EXPIRED", "Expired"),
+        ("CANCELLED", "Cancelled"),
+    ]
+    applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name="policies")
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name="policies")
+    benefits = models.ManyToManyField(Benefit, related_name="policies")
+    policy_number = models.CharField(max_length=100, unique=True)  #will autogenerate a policy number for easy tracking
     start_date = models.DateField()
-    end_date = models.DateField() #based on the duration choosen will be calculated from there
-    duration = models.DecimalField(max_digits=10, decimal_places=2,default=1) 
-    isActive = models.BooleanField(default=True) # to be used to check if the policy is active or not
+    end_date = models.DateField(blank=True, null=True)
+    duration = models.IntegerField(default=12)  # Duration in months
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def save(self, *args, **kwargs):
+        if not self.end_date:
+            self.end_date = self.start_date + timedelta(days=self.duration * 30)
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.applicant},{self.insurance},{self.start_date},{self.end_date},{self.duration},{self.isActive}"
+        return f"{self.policy_number} - {self.status}"
 
 # proceed to payment
 class Payment(models.Model):
