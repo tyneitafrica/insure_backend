@@ -93,12 +93,15 @@ class LoginApplicant(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ussd logic 
+# # ussd logic 
 
-@csrf_exempt
-def ussd_callback(request):
-    if request.method == 'POST':
-        text = request.POST.get('text', "")  # Default to an empty string for new sessions
-        response = process_ussd(text)
+# @csrf_exempt
+# def ussd_callback(request):
+#     if request.method == 'POST':
+#         text = request.POST.get('text', "")  # Default to an empty string for new sessions
+#         response = process_ussd(text)
 
-        return Response({"response": response})
+#         return Response({"response": response})
+
+
+
