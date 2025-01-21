@@ -8,6 +8,8 @@ from rest_framework import status
 import jwt
 from django.views.decorators.csrf import csrf_exempt
 from .ussd import *
+import json
+from django.core.signing import Signer, BadSignature
 
 # Create your views here.
 
@@ -24,7 +26,7 @@ class SignupUser(APIView):
         try:
 
             if User.objects.filter(email=email).exists():
-                return Response({'error': ' A user with this Email is already registered'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'A user with this Email is already registered'}, status=status.HTTP_400_BAD_REQUEST)
             
             if not password:
                 return Response({'error': 'Password is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -93,15 +95,92 @@ class LoginApplicant(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# # ussd logic 
 
-# @csrf_exempt
-# def ussd_callback(request):
-#     if request.method == 'POST':
-#         text = request.POST.get('text', "")  # Default to an empty string for new sessions
-#         response = process_ussd(text)
+# ----------------------------------------------------------------- GET QUOTE for Motor Insurance----------------------------------------------------#
 
-#         return Response({"response": response})
 
+class CreateMotorInsuranceSession(APIView):
+    def post(self, request):
+        data = request.data
+        # Basic user information
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        email = data.get('email')
+        yob = data.get('yob')
+        occupation = data.get('occupation')
+        gender = data.get('gender')
+        id_no = data.get('id')
+        phoneNumber = data.get('phoneNumber')
+        
+        # Vehicle information
+        vehicle_type = data.get('vehicle_type')
+        vehicle_make = data.get('vehicle_make')
+        vehicle_model = data.get('vehicle_model')
+        vehicle_year = data.get('vehicle_year')
+        vehicle_registration_number = data.get('vehicle_registration_number')
+        cover_type = data.get('cover_type')
+        evaluated = data.get('evaluated')
+        vehicle_value = data.get('vehicle_value')
+        cover_start_date = data.get('cover_start_date')
+
+        try:
+            # Correctly construct the dictionary
+            user_details = {
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "yob": yob,
+                "id_no": id_no,
+                "occupation": occupation,
+                "gender": gender,
+                "phoneNumber": phoneNumber,
+                "vehicle_type": vehicle_type,
+                "vehicle_make": vehicle_make,
+                "vehicle_model": vehicle_model,
+                "vehicle_year": vehicle_year,
+                "vehicle_registration_number": vehicle_registration_number,
+                "cover_type": cover_type,
+                "evaluated": evaluated,
+                "vehicle_value": vehicle_value,
+                "cover_start_date": cover_start_date,
+            }
+            
+            # Serialize the dictionary to JSON
+            user_details_json = json.dumps(user_details)
+            sign = Signer()
+            signed_data = sign.sign(user_details_json)
+            # Create the response and set the cookie
+            response = Response({"message": "Insurance session created successfully"}, status=status.HTTP_201_CREATED)
+            response.set_cookie(
+                key="user_details",
+                value=signed_data,
+                httponly=True,
+                samesite='None',
+                secure=False,  # Set to True in production
+                max_age=3600,  # 1 hour
+            )
+            # print(yob)
+
+            return response
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# ----------------------------------------------------------------- GET QUOTE for personal Insurance----------------------------------------------------#
+
+class CreatePersonalInsuranceSession(APIView):
+    def post(self,request):
+        data = request.data
+        # Basic user information
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        email = data.get('email')
+        yob = data.get('yob')
+        occupation = data.get('occupation')
+        gender = data.get('gender')
+        id_no = data.get('id')
+        phoneNumber = data.get('phoneNumber')
+        # health details
 
 
