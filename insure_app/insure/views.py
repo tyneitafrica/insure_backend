@@ -94,6 +94,17 @@ class LoginApplicant(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# -----------------------------------------APPLICANT LOGOUT ----------------------------------#
+
+class LogoutApplicant(APIView):
+    def post(self, request):
+        response = Response()
+        response.delete_cookie('jwt')
+        response.data = {
+            'message': 'Logged out successfully'
+        }
+        return response
+
 # ------------------------------Log in organisation-----------------------------------#
 class LoginOrganisation(APIView):
     def post(self, request):
