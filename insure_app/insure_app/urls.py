@@ -23,6 +23,8 @@ urlpatterns = [
 
     path("api/v1.0/applicant/signup/", SignupUser.as_view(),name="signup user"),
     
+    path("api/v1.0/organisation/signup/", SignupOrganisation.as_view(), name="signup organisation"),
+    
     # login applicant
     path("api/v1.0/applicant/login/", LoginApplicant.as_view(), name="login applicant"),
 
