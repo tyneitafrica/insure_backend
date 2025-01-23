@@ -58,7 +58,7 @@ class LoginApplicant(APIView):
         
         try:
         # check if the user exists
-            user = User.objects.filter(email=email, role=User.Role.ORGANISATION).first()
+            user = User.objects.filter(email=email, role=User.Role.APPLICANT).first()
             if not user:
                 return Response({'error': 'User not found, Check email and try again'}, status=status.HTTP_404_NOT_FOUND)
             
@@ -94,7 +94,46 @@ class LoginApplicant(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# ------------------------------Log in organisation-----------------------------------#
+class LoginOrganisation(APIView):
+    def post(self, request):
+        data= request.data
+        email = data.get('email')
+        password = data.get('password')
+        try:
+            # check if the user exists
+            user = User.objects.filter(email=email, role=User.Role.ORGANISATION).first()
+            if not user:
+                return Response({'error': 'User not found, Check email and try again'}, status=status.HTTP_404_NOT_FOUND)
+            
+            if not user.check_password(password):
+                return Response({'error': 'Incorrect Password'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # create a payload to contain the token
+            payload = {
+                'id':user.id,
+                'exp':timezone.now() + timezone.timedelta(minutes=60), #token to expire after 1 hour
+                'iat':timezone.now()
+            }
 
+            # create the token
+            token = jwt.encode(payload, config("SECRET"), algorithm="HS256")
+            # return the token as a cookie
+            response = Response()
+            response.set_cookie(
+                key='jwt',
+                value=token,
+                httponly=True,
+                samesite='None',
+                secure=False, # to be switched to true in production
+            )
+            response.data = {
+                'message': f'Welcome {user.first_name} ',
+                'jwt':token
+            }
+            return response
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 # ----------------------------------------------------------------- GET QUOTE for Motor Insurance----------------------------------------------------#
 
