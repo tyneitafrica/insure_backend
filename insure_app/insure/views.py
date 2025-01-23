@@ -105,6 +105,44 @@ class LogoutApplicant(APIView):
         }
         return response
 
+#------------------------- sign up orgnisation-----------------------------------#
+class SignupOrganisation(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        companyName= request.data.get('companyName')
+        phoneNumber= request.data.get('phoneNumber')
+        role = User.Role.ORGANISATION
+
+        # check if the user is already registered
+        try:
+            if User.objects.filter(email=email).exists():
+                return Response({'error': 'A user with this Email is already registered'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not password:
+                return Response({'error': 'Password is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not role:
+                return Response({'error': 'Role is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # proceed with user creation
+            serializer = UserSerializer(data={**request.data, "role": role})
+            if serializer.is_valid():
+                user= serializer.save()
+                if user:
+                    organisation= Organisation.objects.create(user=user, companyName=companyName, phoneNumber=phoneNumber)
+                    organisation.save()                    
+              
+                return Response(
+                    {
+                    'message': 'User created successfully',
+                    'user': serializer.data,
+                                
+                    }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 # ------------------------------Log in organisation-----------------------------------#
 class LoginOrganisation(APIView):
     def post(self, request):
