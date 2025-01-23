@@ -26,6 +26,9 @@ urlpatterns = [
     # login applicant
     path("api/v1.0/applicant/login/", LoginApplicant.as_view(), name="login applicant"),
 
+    # login organisation
+    path("api/v1.0/organisation/login/", LoginOrganisation.as_view(), name="login organisation"),
+
     path("api/v1.0/applicant/create_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),
 
 ]
