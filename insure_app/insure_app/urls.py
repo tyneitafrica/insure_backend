@@ -20,17 +20,10 @@ from insure.views import *
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
     path("api/v1.0/applicant/signup/", SignupUser.as_view(),name="signup user"),
-    
-    path("api/v1.0/organisation/signup/", SignupOrganisation.as_view(), name="signup organisation"),
-    
     # login applicant
     path("api/v1.0/applicant/login/", LoginApplicant.as_view(), name="login applicant"),
 
-    # login organisation
-    path("api/v1.0/organisation/login/", LoginOrganisation.as_view(), name="login organisation"),
-
-    path("api/v1.0/applicant/create_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),
+    path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),
 
 ]

@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .ussd import *
 import json
 from django.core.signing import Signer, BadSignature
+from .utility import *
 
 # Create your views here.
 
@@ -240,7 +241,7 @@ class CreateMotorInsuranceSession(APIView):
             # Create the response and set the cookie
             response = Response({"message": "Insurance session created successfully"}, status=status.HTTP_201_CREATED)
             response.set_cookie(
-                key="user_details",
+                key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
