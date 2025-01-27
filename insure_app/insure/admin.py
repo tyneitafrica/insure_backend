@@ -6,6 +6,12 @@ admin.site.site_title = "INSURE"
 admin.site.index_title = "Welcome to Your your Dashboard"
 
 
+class UserAdmin(admin.ModelAdmin):
+    list_display= ('email', 'role',)
+    search_fields= ('email',)
+
+admin.site.register(User, UserAdmin)
+
 class OrganisationAdmin(admin.ModelAdmin):
     list_display = ('company_name', 'phone_number', 'created_at', 'updated_at')
     search_fields = ('company_name', 'phone_number')
@@ -36,7 +42,7 @@ class PolicyAdmin(admin.ModelAdmin):
 admin.site.register(Policy, PolicyAdmin)
 
 class BenefitsAdmin(admin.ModelAdmin):
-    list_display  = ('insurance', 'limit_of_liability', 'rate', 'price', 'created_at', 'updated_at')
+    list_display  = ('insurance', 'limit_of_liability', 'rate', 'price')
     search_fields = ('insurance', 'lmit_of_liability')
     list_filter   = ('created_at', 'updated_at')
 
