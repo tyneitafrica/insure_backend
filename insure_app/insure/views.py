@@ -39,7 +39,7 @@ class SignupOrganisation(APIView):
             if serializer.is_valid():
                 user= serializer.save()
                 if user:
-                    organisation= Organisation.objects.create(user=user, companyName=companyName, phoneNumber=phoneNumber)
+                    organisation= Organisation.objects.create(user=user, company_name=companyName, phone_number=phoneNumber)
                     organisation.save()                    
               
                 return Response(
