@@ -34,7 +34,7 @@ class ApplicantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Applicant
         fields = [
-            'id', 'user', 'phoneNumber', 'yob', 'id_no', 'age', 'occupation', 'gender', 'created_at', 'updated_at'
+            'id', 'user', 'phone_number', 'yob', 'id_no', 'age', 'occupation', 'gender', 'created_at', 'updated_at'
         ]
 
 
