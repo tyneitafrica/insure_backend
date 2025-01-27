@@ -23,6 +23,12 @@ urlpatterns = [
     path("api/v1.0/applicant/signup/", SignupUser.as_view(),name="signup user"),
     # login applicant
     path("api/v1.0/applicant/login/", LoginApplicant.as_view(), name="login applicant"),
+    # sign up org
+    path("api/v1.0/organisation/signup/", SignupOrganisation.as_view(), name="login org"),
+
+    # login org
+    path("api/v1.0/organisation/login/", LoginOrganisation.as_view(), name="login org"),
+
 
     path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),
     path("api/v1.0/applicant/temp_motor_insurance/", MotorTempData.as_view(), name="create temporary_motorinsurance"),   
