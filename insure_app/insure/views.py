@@ -242,89 +242,39 @@ class SignupUser(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
+        id_no = request.data.get('id_no')
+        phone_number = request.data.get('phone_number')
         role = User.Role.APPLICANT
 
-        # Validate inputs
-        if not email or not password:
-            return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            # Check if email exists in the temporary data model
-            temp_data = MotorInsuranceTempData.objects.filter(email=email).first()
+            if not email or not password:
+                return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            if temp_data:
-                # If email exists in temporary data, retrieve details
-                user_data = {
-                    "first_name": temp_data.first_name,
-                    "last_name": temp_data.last_name,
-                    "email": temp_data.email,
-                    "role": User.Role.APPLICANT
-                }
+            # Check if user already exists
+            existing_user = User.objects.filter(email=email).first()
+            if existing_user:
+                return Response({"error": "User already registered, Please login."}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Check if a user already exists with this email
-                if User.objects.filter(email=email).exists():
-                    return Response({"error": "A user with this email already exists, Proceed to login"}, status=status.HTTP_400_BAD_REQUEST)
+            # Create new user if not found
+            serializer = UserSerializer(data={**request.data, "role": role})
+            if serializer.is_valid():
+                user = serializer.save()
 
-                # Add password and create the user with the retrieved details
-                user_data["password"] = password
-                serializer = UserSerializer(data=user_data)
+                # Add details to the Applicant model
+                new_applicant = Applicant.objects.get(user=user)
+                new_applicant.id_no = id_no
+                new_applicant.phone_number = phone_number
+                new_applicant.save()
 
-                if serializer.is_valid():
-                    user = serializer.save()
+                return Response(
+                    {
+                        "message": "Account created successfully",
+                        "user": serializer.data,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
 
-                    # Add additional details to Applicant model
-                    new_applicant = Applicant.objects.get(user=user)
-                    new_applicant.id_no = temp_data.id_no
-                    new_applicant.phone_number = temp_data.phone_number
-                    new_applicant.save()
-
-                    # Delete temporary data after successful account creation
-                    # temp_data.delete()
-
-                    return Response(
-                        {
-                            "message": "Account created successfully",
-                            "user": serializer.data,
-                        },
-                        status=status.HTTP_201_CREATED,
-                    )
-                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-            else:
-                # Direct sign-up (no temporary data found)
-                data = request.data
-                id_no = data.get('id_no')
-                phone_number = data.get('phone_number')
-
-                # Validate direct sign-up fields
-                if not email or not password:
-                    return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-                # Check if user already exists
-                existing_user = User.objects.filter(email=email).first()
-                if existing_user:
-                    return Response({"error": "User already registered, Please login."}, status=status.HTTP_400_BAD_REQUEST)
-
-                # Create new user if not found
-                serializer = UserSerializer(data={**request.data, "role": role})
-                if serializer.is_valid():
-                    user = serializer.save()
-
-                    # Add details to the Applicant model
-                    new_applicant = Applicant.objects.get(user=user)
-                    new_applicant.id_no = id_no
-                    new_applicant.phone_number = phone_number
-                    new_applicant.save()
-
-                    return Response(
-                        {
-                            "message": "Account created successfully",
-                            "user": serializer.data,
-                        },
-                        status=status.HTTP_201_CREATED,
-                    )
-
-                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -389,3 +339,4 @@ class LogoutApplicant(APIView):
 
 
 
+# -----------------------------------------Organisation upload insurance  ----------------------------------#
