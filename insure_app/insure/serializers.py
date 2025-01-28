@@ -97,9 +97,42 @@ class PolicySerializer(serializers.ModelSerializer):
             instance.benefits.set(benefits)
         instance.save()
         return instance
-    
 
-class MotorInsuranceSeriliazerTemp(serializers.ModelSerializer):
+class HealthInsuranceQuoteRequestSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MotorInsuranceTempData
-        fields = "__all__"
+        model = HealthInsuaranceQuoteRequest
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class HealthLifestyleSerializer(serializers.ModelSerializer):
+    health_insurance_quote_request = HealthInsuranceQuoteRequestSerializer()  # Nested serializer
+
+    class Meta:
+        model = HealthLifestyle
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+    def create(self, validated_data):
+        # Handle nested serializer creation for HealthInsuranceQuoteRequest
+        quote_request_data = validated_data.pop('health_insurance_quote_request')
+        quote_request = HealthInsuaranceQuoteRequest.objects.create(**quote_request_data)
+        health_lifestyle = HealthLifestyle.objects.create(
+            health_insurance_quote_request=quote_request,
+            **validated_data
+        )
+        return health_lifestyle
+
+    def update(self, instance, validated_data):
+        # Handle nested serializer update for HealthInsuranceQuoteRequest
+        quote_request_data = validated_data.pop('health_insurance_quote_request', None)
+        if quote_request_data:
+            for key, value in quote_request_data.items():
+                setattr(instance.health_insurance_quote_request, key, value)
+            instance.health_insurance_quote_request.save()
+
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+        return instance
+
+
