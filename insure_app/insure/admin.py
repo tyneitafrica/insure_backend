@@ -7,16 +7,16 @@ admin.site.index_title = "Welcome to Your your Dashboard"
 
 
 class OrganisationAdmin(admin.ModelAdmin):
-    list_display = ('companyName', 'phoneNumber', 'created_at', 'updated_at')
-    search_fields = ('companyName', 'phoneNumber')
+    list_display = ('company_name', 'phone_number', 'created_at', 'updated_at')
+    search_fields = ('company_name', 'phone_number')
     list_filter = ('created_at', 'updated_at')
 
 
 admin.site.register(Organisation, OrganisationAdmin)
 
 class ApplicantAdmin(admin.ModelAdmin):
-    list_display  = ('user', 'phoneNumber','yob','age','id_no','created_at', 'updated_at')
-    search_fields = ('user', 'phoneNumber')
+    list_display  = ('user', 'phone_number','yob','age','id_no','created_at', 'updated_at')
+    search_fields = ('user', 'phone_number')
     list_filter   = ('yob', 'id_no')
 
 admin.site.register(Applicant, ApplicantAdmin)
