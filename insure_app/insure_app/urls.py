@@ -33,4 +33,6 @@ urlpatterns = [
     path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),
     path("api/v1.0/applicant/temp_motor_insurance/", MotorTempData.as_view(), name="create temporary_motorinsurance"),   
 
+    path("api/healthinsuarancesession/", HealthInsuaranceSession.as_view(), name="create health insurance session"),
+
 ]
