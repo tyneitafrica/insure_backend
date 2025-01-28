@@ -4,6 +4,8 @@ from django.utils import timezone
 from datetime import timedelta
 from .manager import CustomUserManager
 from .utility import generate_otp
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 # Custom User Model
@@ -39,6 +41,12 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.email} - {self.role}"
+
+# set up the receivor 
+@receiver(post_save, sender=User)
+def create_applicant_profile(sender, instance, created, **kwargs):
+    if created and instance.role == User.Role.APPLICANT:
+        Applicant.objects.create(user=instance)
 
 
 # Applicant Model
@@ -101,6 +109,8 @@ class Insurance(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.type}"
+    
+
 
 
 # Motor Insurance Model
@@ -133,11 +143,13 @@ class HealthInsurance(models.Model):
 
 # Benefit Model
 class Benefit(models.Model):
-    insurance = models.ManyToManyField(Insurance, related_name='benefits')
+    insurance = models.ForeignKey(Insurance,on_delete=models.CASCADE, related_name='benefits')
     limit_of_liability = models.CharField(max_length=100)
     rate = models.DecimalField(max_digits=5, decimal_places=2)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.limit_of_liability} - {self.price}"
@@ -179,3 +191,34 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.transaction_id} - {self.amount}"
+
+# to hold user data temporary   
+class MotorInsuranceTempData(models.Model):
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20)
+    id_no = models.CharField(max_length=20)
+    # motor details
+    vehicle_category = models.CharField(max_length=100,choices=[('Private','Private'),('Commercial','Commercial'),('Public Service','Public Service')])
+    vehicle_type = models.CharField(max_length=100)
+    vehicle_model = models.CharField(max_length=100)
+    vehicle_year = models.IntegerField()
+    vehicle_value = models.DecimalField(max_digits=100, decimal_places=2)
+    cover_start_date = models.DateField()
+    is_evaluated = models.BooleanField(default=False)
+    evaluated_price = models.DecimalField(max_digits=100,decimal_places=2,null=True,blank=True)
+    vehicle_registration_number = models.CharField(max_length=100)
+    insurance_type = models.CharField(
+    max_length=50,
+    choices=[
+        ('comprehensive', 'Comprehensive'),
+        ('third_party', 'Third Party'),
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} - {self.vehicle_registration_number}"   
+
+

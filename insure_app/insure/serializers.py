@@ -97,3 +97,9 @@ class PolicySerializer(serializers.ModelSerializer):
             instance.benefits.set(benefits)
         instance.save()
         return instance
+    
+
+class MotorInsuranceSeriliazerTemp(serializers.ModelSerializer):
+    class Meta:
+        model = MotorInsuranceTempData
+        fields = "__all__"
