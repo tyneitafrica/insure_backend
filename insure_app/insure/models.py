@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+# from django.core.validators import RegexValidator, MinLengthValidator,MaxLengthValidator
 from datetime import timedelta
 from .manager import CustomUserManager
 from .utility import generate_otp
@@ -136,14 +137,51 @@ class HealthInsurance(models.Model):
     health_type = models.CharField(max_length=100)  # e.g., Individual, Family
     coverage_amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_travel_related = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.health_type} - {self.coverage_amount}"
 
+class HealthInsuaranceQuoteRequest(models.Model):
+    class GenderChoice(models.TextChoices):
+        MALE= 'MALE', 'Male'
+        FEMALE= 'FEMALE', 'Female'
+        OTHER= 'OTHER', 'Other'
+
+    name= models.CharField(max_length=100, null=True, blank=True)
+    dob= models.DateField(null=True, blank=True)
+    national_id= models.BigIntegerField()
+    occupation= models.CharField(max_length=200, null=True, blank=True)
+    phone_number= models.CharField(max_length=20, null=True, blank=True)
+    gender= models.CharField(max_length=20, choices=GenderChoice.choices, default=GenderChoice.MALE)
+    coverage_amount= models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    coverage_type= models.CharField(max_length=100, null=True, blank=True)  # e.g., Individual, Family
+    is_travel_related= models.BooleanField(default=False, null=True, blank=True)
+    is_covered= models.BooleanField(default=False, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class HealthLifestyle(models.Model):
+    # one on one relation
+    health_insuarance_quote_request = models.OneToOneField(HealthInsuaranceQuoteRequest, on_delete=models.CASCADE, related_name='health_lifestyle')
+    pre_existing_condition= models.BooleanField(default=False)
+    high_risk_activities= models.BooleanField(default=False)    
+    medication= models.BooleanField(default=False)
+    mode_of_transport= models.CharField(max_length=200, null=True, blank=True)
+    smoking= models.BooleanField(default=False)
+    past_claim= models.BooleanField(default=False)
+    stress_level= models.BooleanField(default=False)
+    family_history= models.BooleanField(default=False)
+    allergies= models.BooleanField(default=False)
+    mental_health= models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 
 # Benefit Model
 class Benefit(models.Model):
-    insurance = models.ForeignKey(Insurance,on_delete=models.CASCADE, related_name='benefits')
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='benefits')
     limit_of_liability = models.CharField(max_length=100)
     rate = models.DecimalField(max_digits=5, decimal_places=2)
     price = models.DecimalField(max_digits=10, decimal_places=2)

@@ -14,6 +14,98 @@ from .utility import *
 
 # Create your views here.
 
+
+
+class SignupUser(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        role = User.Role.APPLICANT
+
+
+        # check if the user is already registered
+        try:
+
+            if User.objects.filter(email=email).exists():
+                return Response({'error': 'A user with this Email is already registered'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not password:
+                return Response({'error': 'Password is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not role:
+                return Response({'error': 'Role is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # proceed with user creation
+            serializer = UserSerializer(data={**request.data, "role": role})
+            if serializer.is_valid():
+                serializer.save()
+              
+                return Response(
+                    {
+                    'message': 'User created successfully',
+                    'user': serializer.data,
+                                
+                    }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# -----------------------------------------APPLICANT LOGIN ----------------------------------#
+
+class LoginApplicant(APIView):
+    def post(self,request):
+        email = request.data['email']
+        password = request.data['password']
+        
+        try:
+        # check if the user exists
+            user = User.objects.filter(email=email, role=User.Role.APPLICANT).first()
+            if not user:
+                return Response({'error': 'User not found, Check email and try again'}, status=status.HTTP_404_NOT_FOUND)
+            
+
+            if not user.check_password(password):
+                return Response({'error': 'Incorrect Password'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # create a payload to contain the token
+            payload = {
+                'id':user.id,
+                'exp':timezone.now() + timezone.timedelta(minutes=60), #token to expire after 1 hour
+                'iat':timezone.now()
+            }
+
+            # create the token 
+            token = jwt.encode(payload,config("SECRET"),algorithm="HS256")
+            
+            # return the token as a cookie
+            response = Response()
+            response.set_cookie(
+                key='jwt',
+                value=token,
+                httponly=True,
+                samesite='None',
+                secure=False, # to be switched to true in production
+            )
+            response.data = {
+                'message': f'Welcome {user.first_name} ',
+                'jwt':token
+            }
+            return response
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# -----------------------------------------APPLICANT LOGOUT ----------------------------------#
+
+class LogoutApplicant(APIView):
+    def post(self, request):
+        response = Response()
+        response.delete_cookie('jwt')
+        response.data = {
+            'message': 'Logged out successfully'
+        }
+        return response
+
 #------------------------- sign up orgnisation-----------------------------------#
 class SignupOrganisation(APIView):
     def post(self, request):
@@ -39,7 +131,7 @@ class SignupOrganisation(APIView):
             if serializer.is_valid():
                 user= serializer.save()
                 if user:
-                    organisation= Organisation.objects.create(user=user, companyName=companyName, phoneNumber=phoneNumber)
+                    organisation= Organisation.objects.create(user=user, company_name=companyName, phone_number=phoneNumber)
                     organisation.save()                    
               
                 return Response(
@@ -181,162 +273,134 @@ class CreatePersonalInsuranceSession(APIView):
         # health details
 
 
-
-# ----------------------------------------------------------------- Motor  Insurance Temp Data ----------------------------------------------------#
-
-class MotorTempData(APIView):
-    def post(self,request):
-        data = request.data
-        first_name = data.get('first_name')
-        last_name = data.get('last_name')
-        email = data.get('email')
-        phone_number = data.get('phone_number')
-        id_no = data.get('id_no')
-        vehicle_category = data.get('vehicle_category')
-        vehicle_type = data.get('vehicle_type')
-        vehicle_model = data.get('vehicle_model')
-        vehicle_year = data.get('vehicle_year')
-        vehicle_value = data.get('vehicle_value')
-        insurance_type = data.get('insurance_type')
-        is_evaluated = data.get('is_evaluated')
-        evaluated_price = data.get('evaluated_price')
-        vehicle_registration_number = data.get('registration_number')
-        cover_start_date = data.get('cover_start_date')
-
-
-        # update the fields respectively
-        try:
-            new_quote = MotorInsuranceTempData.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                email=email,
-                phone_number=phone_number,
-                id_no=id_no,
-                vehicle_category=vehicle_category,
-                vehicle_type=vehicle_type,
-                vehicle_model=vehicle_model,
-                vehicle_year=vehicle_year,
-                vehicle_value=vehicle_value,
-                insurance_type=insurance_type,
-                is_evaluated=is_evaluated,
-                evaluated_price=evaluated_price,
-                vehicle_registration_number=vehicle_registration_number,
-                cover_start_date=cover_start_date,
-            )
-            serializer = MotorInsuranceSeriliazerTemp(new_quote)
-
-            response = Response(
-                {
-                "message": "Motor Insurance quote created successfully",
-                "data":serializer.data  
-                 },
-                 
-                  status=status.HTTP_201_CREATED)
-            
-            return response
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-# -----------------------------------------------------------------  Signup USER ----------------------------------------------------#
-class SignupUser(APIView):
+class HealthInsuaranceSession(APIView):
     def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
-        id_no = request.data.get('id_no')
-        phone_number = request.data.get('phone_number')
-        role = User.Role.APPLICANT
-
         try:
-            if not email or not password:
-                return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+            data = request.data
+            # Basic user information
+            name= data.get('name')
+            dob= data.get('dob')
+            national_id= data.get('national_id')
+            occupation= data.get('occupation')
+            phone_number= data.get('phone_number')
+            gender= data.get('gender')
+            coverage_amount= data.get('coverage_amount')
+            coverage_type= data.get('coverage_type')
+            is_travel_related= data.get('is_travel_related')
+            is_covered= data.get('is_covered')
 
-            # Check if user already exists
-            existing_user = User.objects.filter(email=email).first()
-            if existing_user:
-                return Response({"error": "User already registered, Please login."}, status=status.HTTP_400_BAD_REQUEST)
+            # HealthLifestyle information
+            pre_existing_condition = data.get('pre_existing_condition', False)
+            high_risk_activities = data.get('high_risk_activities', False)
+            medication = data.get('medication', False)
+            mode_of_transport = data.get('mode_of_transport', None)
+            smoking = data.get('smoking', False)
+            past_claim = data.get('past_claim', False)
+            stress_level = data.get('stress_level', False)
+            family_history = data.get('family_history', False)
+            allergies = data.get('allergies', False)
+            mental_health = data.get('mental_health', False)
 
-            # Create new user if not found
-            serializer = UserSerializer(data={**request.data, "role": role})
-            if serializer.is_valid():
-                user = serializer.save()
+            if not all([name, dob, national_id, occupation, phone_number,gender,coverage_amount, coverage_type]):
+                return Response({'error': 'All fields are required'}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Add details to the Applicant model
-                new_applicant = Applicant.objects.get(user=user)
-                new_applicant.id_no = id_no
-                new_applicant.phone_number = phone_number
-                new_applicant.save()
+            if is_travel_related == 'true':
+                is_travel_related = True
+            else:
+                is_travel_related = False
 
-                return Response(
-                    {
-                        "message": "Account created successfully",
-                        "user": serializer.data,
-                    },
-                    status=status.HTTP_201_CREATED,
-                )
+            if is_covered == 'true':
+                is_covered = True
+            else:
+                is_covered = False
 
-            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            available_quote= HealthInsuaranceQuoteRequest.objects.filter(national_id=national_id).first()
 
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-# -----------------------------------------APPLICANT LOGIN ----------------------------------#
-
-class LoginApplicant(APIView):
-    def post(self,request):
-        email = request.data['email']
-        password = request.data['password']
-        
-        try:
-        # check if the user exists
-            user = User.objects.filter(email=email, role=User.Role.APPLICANT).first()
-            if not user:
-                return Response({'error': 'User not found, Check email and try again'}, status=status.HTTP_404_NOT_FOUND)
+            if available_quote:
+                # available_quote.delete()
+                new_quote_request= available_quote
             
+            else:            
+                # post data        
+                new_quote_request= HealthInsuaranceQuoteRequest.objects.create(
+                                                                name= name, 
+                                                                national_id=national_id, 
+                                                                dob=dob, occupation=occupation, 
+                                                                phone_number=phone_number, 
+                                                                gender=gender, 
+                                                                coverage_amount= coverage_amount,
+                                                                coverage_type=coverage_type,
+                                                                is_travel_related=is_travel_related,
+                                                                is_covered=is_covered
+                                                            )
+                new_quote_request.save()
 
-            if not user.check_password(password):
-                return Response({'error': 'Incorrect Password'}, status=status.HTTP_400_BAD_REQUEST)
+            if new_quote_request:
+                user_quote= HealthLifestyle.objects.filter(health_insuarance_quote_request=new_quote_request).first()
+                if user_quote:
+                    user_quote.delete()
+                    
+                new_lifestyle= HealthLifestyle.objects.create(health_insuarance_quote_request=new_quote_request,
+                                                pre_existing_condition=pre_existing_condition,
+                                                high_risk_activities=high_risk_activities,
+                                                medication=medication,
+                                                mode_of_transport=mode_of_transport,
+                                                smoking=smoking,
+                                                past_claim=past_claim,
+                                                stress_level=stress_level,
+                                                family_history=family_history,
+                                                allergies=allergies,
+                                                mental_health=mental_health
+                                                )
+                new_lifestyle.save()
             
-            # create a payload to contain the token
-            payload = {
-                'id':user.id,
+            if new_lifestyle:
+                response_data= {
+                    "name": name,
+                    "national_id": national_id,
+                    "dob": dob,
+                    "occupation": occupation,
+                    "phone_number": phone_number,
+                    "gender": gender,
+                    "coverage_amount": coverage_amount,
+                    "coverage_type": coverage_type,
+                    "is_travel_related": is_travel_related,
+                    "is_covered": is_covered,
+                    "pre_existing_condition": pre_existing_condition,
+                    "high_risk_activities": high_risk_activities,
+                    "medication": medication,
+                    "mode_of_transport": mode_of_transport,
+                    "smoking": smoking,
+                    "past_claim": past_claim,
+                    "stress_level": stress_level,
+                    "family_history": family_history,
+                    "allergies": allergies,
+                    "mental_health": mental_health
+                }
+                # return the response in a cookie
+                payload = {
+                'data':response_data,
                 'exp':timezone.now() + timezone.timedelta(minutes=60), #token to expire after 1 hour
                 'iat':timezone.now()
-            }
+                }
+                # create the token 
+                token = jwt.encode(payload,config("SECRET"),algorithm="HS256")
 
-            # create the token 
-            token = jwt.encode(payload,config("SECRET"),algorithm="HS256")
-            
-            # return the token as a cookie
-            response = Response()
-            response.set_cookie(
-                key='jwt',
-                value=token,
-                httponly=True,
-                samesite='None',
-                secure=False, # to be switched to true in production
-            )
-            response.data = {
-                'message': f'Welcome {user.first_name} ',
-                'jwt':token
-            }
-            return response
+                response = Response()
+                response.set_cookie(
+                    key='healthsession',
+                    value=token,
+                    httponly=True,
+                    samesite='None',
+                    secure=False, # to be switched to true in production
+                )
+                response.data = {
+                    'message': f'Welcome {name} ',
+                    'data':response_data
+                }
+                return response
         
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-# -----------------------------------------APPLICANT LOGOUT ----------------------------------#
-
-class LogoutApplicant(APIView):
-    def post(self, request):
-        response = Response()
-        response.delete_cookie('jwt')
-        response.data = {
-            'message': 'Logged out successfully'
-        }
-        return response
-
-
-
-# -----------------------------------------Organisation upload insurance  ----------------------------------#
+        
