@@ -47,7 +47,8 @@ class OrganisationSerializer(serializers.ModelSerializer):
 class InsuranceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Insurance
-        fields = ['id', 'organisation', 'title', 'price', 'created_at', 'updated_at']
+        fields = ['id', 'organisation', 'insurance_image','title', 'type', 'description','created_at', 'updated_at']
+        read_only_fields = ('created_at', 'updated_at')
 
 
 class MotorInsuranceSerializer(serializers.ModelSerializer):
@@ -60,12 +61,13 @@ class MotorInsuranceSerializer(serializers.ModelSerializer):
 
 
 class HealthInsuranceSerializer(serializers.ModelSerializer):
+    insuarance= InsuranceSerializer(read_only=True)
     class Meta:
         model = HealthInsurance
         fields = [
-            'id', 'organisation', 'title', 'price', 'health_type', 'coverage_amount', 'is_travel_related',
-            'is_covered_by_insurance', 'created_at', 'updated_at'
+            'id', 'high_range', 'low_range','cover_type', 'price','created_at', 'updated_at'
         ]
+        read_only_fields = ('created_at', 'updated_at')
 
 
 class BenefitSerializer(serializers.ModelSerializer):
