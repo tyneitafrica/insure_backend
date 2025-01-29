@@ -48,7 +48,13 @@ urlpatterns = [
     path("api/v1.0/motorinsurance/upload/",UploadMotorInsurance.as_view(), name="create health insurance step1"),
     path("api/v1.0/motorinsurance/details/",MotorInsuranceDetails.as_view(), name="create health insurance step2"),
     path("api/v1.0/motorinsurance/benefits/",MotorInsuranceBenefits.as_view(), name="create health insurance step3"),
-    path("api/v1.0/motor-insurance/filter/",FilterMotorInsurance.as_view(), name="filter motor insurance"),
+    path("api/v1.0/motorinsurance/filter/",FilterMotorInsurance.as_view(), name="filter motor insurance"),
+#    upload marine section 
+    path("api/v1.0/applicant/marine_session/", CreateMarineInsuranceSession.as_view(), name="create insurance session"),
+    path("api/v1.0/marineinsurance/upload/", MarineInsuranceUpload.as_view(), name="create  marine insurance step 1"),  
+    path("api/v1.0/marineinsurance/details/", MarineInsuranceDetails.as_view(), name="create marine insurance step 2"),
+    path("api/v1.0/marineinsurance/benefits/", MarineInsuranceBenefits.as_view(), name="create marine insurance step3 "),
+    path("api/v1.0/marineinsurance/filter/",FilterMotorInsurance.as_view(), name="filter marine insurance"),
 
 
 ]
