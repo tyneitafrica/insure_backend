@@ -13,7 +13,41 @@ from django.core.signing import Signer, BadSignature
 from .utility import *
 
 # Create your views here.
+# unsign cookie 
+def get_user_from_cookie(cookie):
+    signer = Signer()
+    if not cookie:
+        raise AuthenticationFailed('User ID not found in cookies')
 
+    try:
+        user_motor_details = signer.unsign(cookie)
+        return user_motor_details
+    except BadSignature:
+        raise AuthenticationFailed('Invalid cookie signature')
+    
+def get_user_from_token(request):
+    token = request.COOKIES.get('jwt')
+    if not token:
+        raise AuthenticationFailed("Token is missing from the request.")
+
+    try:
+        payload = jwt.decode(token, config("SECRET"), algorithms=['HS256'])
+    except jwt.ExpiredSignatureError:
+        raise AuthenticationFailed("Token has expired.")
+    except jwt.InvalidTokenError:
+        raise AuthenticationFailed("Invalid token.")
+
+    user = User.objects.filter(id=payload['id']).first()
+    if not user:
+        raise AuthenticationFailed("User not found.")
+
+    return user
+
+def get_organisation_from_user(user):
+    organisation = Organisation.objects.filter(user=user).first()
+    if not organisation:
+        raise ValueError("Organisation not found.")
+    return organisation
 # ====Function to get user from token=======================================================================                          
 def get_user_from_token(request):
     token = request.COOKIES.get('jwt')
@@ -320,7 +354,7 @@ class CreatePersonalInsuranceSession(APIView):
         phoneNumber = data.get('phoneNumber')
         # health details
 
-
+# ----------------------------------------------------------------- GET QUOTE health Insurance----------------------------------------------------#
 class HealthInsuaranceSession(APIView):
     def post(self, request):
         try:
