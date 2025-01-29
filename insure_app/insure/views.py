@@ -35,6 +35,23 @@ def get_user_from_token(request):
 
     return user
 
+def get_user_from_cookie(cookie):
+    signer = Signer()
+    if not cookie:
+        raise AuthenticationFailed('User ID not found in cookies')
+
+    try:
+        user_motor_details = signer.unsign(cookie)
+        return user_motor_details
+    except BadSignature:
+        raise AuthenticationFailed('Invalid cookie signature')
+    
+def get_organisation_from_user(user):
+    organisation = Organisation.objects.filter(user=user).first()
+    if not organisation:
+        raise ValueError("Organisation not found.")
+    return organisation
+
 
 # -----------------------------------------------------------------  Signup USER ----------------------------------------------------#
 class SignupUser(APIView):
@@ -459,5 +476,193 @@ class GetHealthInsuranceQuote(APIView):
             serializer= HealthLifestyleSerializer(user_lifestyle, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+# ----------------------------------------------------------------- Upload insurance policy ----------------------------------------------------#
+class UploadMotorInsurance(APIView):
+    def post(self, request):
+        data = request.data
+        type = 'Motor'
+        title = data.get('title')
+        description = data.get('description')
+
+        try:
+            # Retrieve user from token
+            user = get_user_from_token(request)
+
+            # Retrieve organisation associated with the user
+            organisation = get_organisation_from_user(user)
+
+            # Create a new insurance entry
+            new_insurance = Insurance.objects.create(
+                organisation=organisation,
+                type=type,
+                title=title,
+                description=description
+            )
+
+            response = Response({
+                'message': 'Insurance created successfully',
+                'data': {
+                    'id': new_insurance.id,
+                    'type': new_insurance.type,
+                    'title': new_insurance.title,
+                    'description': new_insurance.description
+                }
+            }, status=status.HTTP_201_CREATED)
+
+            response.set_cookie(
+                key='insurance',
+                value=new_insurance.id,
+                httponly=True,
+                samesite='None',
+                secure=False,
+                max_age=3600  # 1 hour
+            )
+            return response
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# upload step 2 
+class MotorInsuranceDetails(APIView):
+    def post(self,request):
+        data = request.data
+        cover_type = data.get('cover_type')
+        price = data.get("price")
+        vehicle_type = data.get("vehicle_type")
+        
+        try:
+            get_insurance_id = request.COOKIES.get('insurance')
+            if not get_insurance_id:
+                return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # query insurance
+            insurance = Insurance.objects.get(id=get_insurance_id)
+
+
+            upload = MotorInsurance.objects.create(
+                insurance=insurance,
+                cover_type=cover_type,
+                price=price,
+                vehicle_type=vehicle_type
+            )
+
+            response = Response({
+                'message': 'Insurance created successfully',
+                'data': {
+                    'id': upload.id,
+                    'cover_type': upload.cover_type,
+                    'price': upload.price
+                }
+            }, status=status.HTTP_201_CREATED)
+
+            return response
+        
+        except Insurance.DoesNotExist:
+            return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class MotorInsuranceBenefits(APIView):
+    def post (self,request):
+        data = request.data
+        limit_of_liability = data.get('limit_of_liability')
+        rate = data.get('rate')
+        price = data.get('price')  
+        description = data.get('description') 
+
+        try:
+            get_insurance_id = request.COOKIES.get('insurance')
+            if not get_insurance_id:
+                return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # query insurance
+            insurance = Insurance.objects.get(id=get_insurance_id)
+
+            new_benefit = Benefit.objects.create(
+                insurance=insurance,
+                limit_of_liability=limit_of_liability,
+                rate=rate,
+                price=price,
+                description=description 
+            )
+
+            return Response({
+                "message":"Benefits created successfully",
+                "data":{
+                    "id":new_benefit.id,
+                    "limit_of_liability":new_benefit.limit_of_liability,
+                    "rate":new_benefit.rate,
+                    "price":new_benefit.price,
+                    "description":new_benefit.description
+                }
+            })      
+        except Insurance.DoesNotExist:
+            return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class FilterMotorInsurance(APIView):
+    def get(self, request):
+        try:
+            # Retrieve and decode the cookie
+            signed_data = request.COOKIES.get('user_motor_details')
+            if not signed_data:
+                return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Unsigned and deserialize the cookie data
+            sign = Signer()
+            user_details_json = sign.unsign(signed_data)
+            user_details = json.loads(user_details_json)
+            
+            # Extract filter parameters from the cookie
+            vehicle_type = user_details.get('vehicle_type')
+            cover_type = user_details.get('cover_type')
+            insurance_type = "Motor"  # We're filtering for motor insurance
+            
+            # Step 1: Query the Insurance model for the relevant policies
+            insurance_queryset = Insurance.objects.filter(type=insurance_type)
+            
+            if not insurance_queryset.exists():
+                return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Step 2: Query the MotorInsurance model for the specific details
+            motor_queryset = MotorInsurance.objects.filter(insurance__in=insurance_queryset)
+            
+            # Apply additional filters
+            if vehicle_type:
+                motor_queryset = motor_queryset.filter(vehicle_type=vehicle_type)
+            if cover_type:
+                motor_queryset = motor_queryset.filter(cover_type=cover_type)
+            
+            if not motor_queryset.exists():
+                return Response({'message': 'No motor insurance policies match the given filters'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Step 3: Serialize the results
+            policies_data = [
+                {
+                    'id': motor_policy.id,
+                    'vehicle_type': motor_policy.vehicle_type,
+                    'cover_type': motor_policy.cover_type,
+                    'price': motor_policy.price,
+                    'insurance_title': motor_policy.insurance.title,
+                    'organisation_name': motor_policy.insurance.organisation.company_name,
+                }
+                for motor_policy in motor_queryset
+            ]
+            
+            # Return the filtered results
+            return Response({
+                'message': 'Filtered motor insurance policies retrieved successfully',
+                'data': policies_data
+            }, status=status.HTTP_200_OK)
+
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

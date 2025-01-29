@@ -34,5 +34,13 @@ urlpatterns = [
 
     path("api/v1.0/health-insuarance-session/", HealthInsuaranceSession.as_view(), name="create health insurance session"),
     path("api/v1.0/get-auth-quotes/", GetHealthInsuranceQuote.as_view(), name="get user quotes"),
+    path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),
+
+    path("api/healthinsuarancesession/", HealthInsuaranceSession.as_view(), name="create health insurance session"),
+    path("api/v1.0/motorinsurance/upload/",UploadMotorInsurance.as_view(), name="create health insurance step1"),
+    path("api/v1.0/motorinsurance/details/",MotorInsuranceDetails.as_view(), name="create health insurance step2"),
+    path("api/v1.0/motorinsurance/benefits/",MotorInsuranceBenefits.as_view(), name="create health insurance step3"),
+    path("api/v1.0/motor-insurance/filter/",FilterMotorInsurance.as_view(), name="filter motor insurance"),
+
 
 ]

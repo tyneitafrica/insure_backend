@@ -90,7 +90,7 @@ class Organisation(models.Model):
         return f"{self.company_name}"
 
 
-# Insurance Base Model(org)
+# Insurance Base Model
 class Insurance(models.Model):
     TYPE_CHOICES = [
         ("Motor", "Motor"),
@@ -100,48 +100,49 @@ class Insurance(models.Model):
         ("Marine", "Marine"),
         ("Professional Indemnity", "Professional Indemnity"),
     ]
-
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='insurances')
+    insurance_image = models.ImageField(upload_to='insurance_images/', null=True, blank=True) #will handle profile image of a specific insurance 
     type = models.CharField(max_length=50, choices=TYPE_CHOICES)
     title = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.title} - {self.type}"
-    
+        return f"{self.title} {self.type} {self.description} {self.organisation}"
 
-
-
-# Motor Insurance Model(org)
+# Motor Insurance Model
 class MotorInsurance(models.Model):
-    insurance = models.OneToOneField(Insurance, on_delete=models.CASCADE, related_name='motor_details')
-    vehicle_type = models.CharField(max_length=100)  # e.g., Private, Commercial
-    vehicle_make = models.CharField(max_length=100)
-    vehicle_model = models.CharField(max_length=100)
-    vehicle_year = models.IntegerField()
-    cover_start_date = models.DateField()
-    vehicle_registration_number = models.CharField(max_length=100)
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='motor_details')
+    vehicle_type = models.CharField(max_length=100)  # e.g., saloon,bus,
     cover_type = models.CharField(max_length=100)  # e.g., Comprehensive
-    evaluated = models.BooleanField(default=False)
-    vehicle_value = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f"{self.vehicle_registration_number} - {self.cover_type}"
+        return f"{self.price} - {self.cover_type}"
 
 
-# Health Insurance Model(org)
+# Health Insurance Model
 class HealthInsurance(models.Model):
-    insurance = models.OneToOneField(Insurance, on_delete=models.CASCADE, related_name='health_details')
-    health_type = models.CharField(max_length=100)  # e.g., Individual, Family
-    coverage_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    is_travel_related = models.BooleanField(default=False)
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='health_details')
+    cover_type = models.CharField(max_length=100)  # e.g., Individual, Family
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.cover_type} - {self.price}"
+
+# Benefit Model
+class Benefit(models.Model):
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='benefits')
+    limit_of_liability = models.CharField(max_length=100)
+    rate = models.DecimalField(max_digits=5, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.health_type} - {self.coverage_amount}"
+        return f"{self.limit_of_liability} - {self.price}"
 
 class HealthInsuaranceQuoteRequest(models.Model):
     class GenderChoice(models.TextChoices):
@@ -162,9 +163,10 @@ class HealthInsuaranceQuoteRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    
 class HealthLifestyle(models.Model):
-    # one to many relation
-    health_insuarance_quote_request= models.ForeignKey(HealthInsuaranceQuoteRequest, on_delete=models.CASCADE, related_name='lifestyle')
+    # one on one relation
+    health_insuarance_quote_request = models.OneToOneField(HealthInsuaranceQuoteRequest, on_delete=models.CASCADE, related_name='health_lifestyle')
     pre_existing_condition= models.BooleanField(default=False)
     high_risk_activities= models.BooleanField(default=False)    
     medication= models.BooleanField(default=False)
@@ -179,18 +181,6 @@ class HealthLifestyle(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
-# Benefit Model
-class Benefit(models.Model):
-    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='benefits')
-    limit_of_liability = models.CharField(max_length=100)
-    rate = models.DecimalField(max_digits=5, decimal_places=2)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.limit_of_liability} - {self.price}"
 
 
 # Policy Model
