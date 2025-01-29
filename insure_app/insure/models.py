@@ -253,3 +253,45 @@ class MotorInsuranceTempData(models.Model):
         return f"{self.first_name} {self.last_name} - {self.vehicle_registration_number}"   
 
 
+# Marine Insurance Temporary Data Model
+class MarineInsuranceTempData(models.Model):
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20)
+    id_no = models.CharField(max_length=20)
+    # Marine-specific details
+    vessel_type = models.CharField(max_length=100)  # e.g., Cargo Ship, Fishing Boat
+    coverage_type = models.CharField(max_length=100, choices=[
+        ('Hull Insurance', 'Hull Insurance'),
+        ('Cargo Insurance', 'Cargo Insurance'),
+        ('Freight Insurance', 'Freight Insurance'),
+    ])
+    is_evaluated = models.BooleanField(default=False)
+    evaluated_price = models.DecimalField(max_digits=100, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} - {self.vessel_name}"
+    
+
+# Marine Insurance Model
+class MarineInsurance(models.Model):
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='marine_details')
+    vessel_type = models.CharField(max_length=100,choices=[
+        ('Fishing Boat', 'Fishing Boat'),
+        ('Cargo', 'Cargo'),
+        ('Yacht', 'Yacht'),        
+    ])  # e.g., Cargo Ship, Fishing Boat, Yacht
+    cargo_type = models.CharField(max_length=100,null=True,blank=True)  # e.g., General Cargo, Oil, Containers
+    voyage_type = models.CharField(max_length=100,null=True,blank=True)  # e.g., Coastal, International
+    coverage_type = models.CharField(max_length=100, choices=[
+        ('Hull Insurance', 'Hull Insurance'),
+        ('Cargo Insurance', 'Cargo Insurance'),
+        ('Freight Insurance', 'Freight Insurance'),    ])  # e.g., Hull Insurance, Cargo Insurance
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.vessel_type} - {self.coverage_type} - {self.price}"
+

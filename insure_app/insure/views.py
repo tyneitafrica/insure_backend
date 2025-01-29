@@ -321,7 +321,7 @@ class CreateMotorInsuranceSession(APIView):
             sign = Signer()
             signed_data = sign.sign(user_details_json)
             # Create the response and set the cookie
-            response = Response({"message": "Insurance session created successfully"}, status=status.HTTP_201_CREATED)
+            response = Response({"message": "Motor Insurance session created successfully"}, status=status.HTTP_201_CREATED)
             response.set_cookie(
                 key="user_motor_details",
                 value=signed_data,
@@ -549,7 +549,7 @@ class UploadMotorInsurance(APIView):
             }, status=status.HTTP_201_CREATED)
 
             response.set_cookie(
-                key='insurance',
+                key='motor_insurance',
                 value=new_insurance.id,
                 httponly=True,
                 samesite='None',
@@ -573,7 +573,7 @@ class MotorInsuranceDetails(APIView):
         vehicle_type = data.get("vehicle_type")
         
         try:
-            get_insurance_id = request.COOKIES.get('insurance')
+            get_insurance_id = request.COOKIES.get('motor_insurance')
             if not get_insurance_id:
                 return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -604,6 +604,7 @@ class MotorInsuranceDetails(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# step3
 class MotorInsuranceBenefits(APIView):
     def post (self,request):
         data = request.data
@@ -613,7 +614,7 @@ class MotorInsuranceBenefits(APIView):
         description = data.get('description') 
 
         try:
-            get_insurance_id = request.COOKIES.get('insurance')
+            get_insurance_id = request.COOKIES.get('motor_insurance')
             if not get_insurance_id:
                 return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -697,6 +698,276 @@ class FilterMotorInsurance(APIView):
             # Return the filtered results
             return Response({
                 'message': 'Filtered motor insurance policies retrieved successfully',
+                'data': policies_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+# ----------------------------------------------------------------- Upload Marine insurance policy ----------------------------------------------------#
+# step 1
+class MarineInsuranceUpload(APIView):
+    def post(self,request):
+        data = request.data
+        type = 'Marine'
+        title = data.get('title')
+        description = data.get('description')
+
+        try:
+            # Retrieve user from token
+            user = get_user_from_token(request)
+
+            # Retrieve organisation associated with the user
+            organisation = get_organisation_from_user(user)
+
+            # Create a new insurance entry
+            new_insurance = Insurance.objects.create(
+                organisation=organisation,
+                type=type,
+                title=title,
+                description=description
+            )
+
+            response = Response({
+                'message': 'Insurance created successfully',
+                'data': {
+                    'id': new_insurance.id,
+                    'type': new_insurance.type,
+                    'title': new_insurance.title,
+                    'description': new_insurance.description
+                }
+            }, status=status.HTTP_201_CREATED)
+
+            response.set_cookie(
+                key='marine_insurance',
+                value=new_insurance.id,
+                httponly=True,
+                samesite='None',
+                secure=False,
+                max_age=3600  # 1 hour
+            )
+            return response
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# step 2 
+class MarineInsuranceDetails(APIView):
+    def post(self, request):
+        data = request.data
+        vessel_type = data.get('vessel_type')
+        cargo_type = data.get('cargo_type')
+        voyage_type = data.get('voyage_type')
+        coverage_type = data.get('coverage_type')
+        price = data.get('price')
+
+        try:
+            get_insurance_id = request.COOKIES.get('marine_insurance')
+            if not get_insurance_id:
+                return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # query insurance
+            insurance = Insurance.objects.get(id=get_insurance_id)
+
+            upload = MarineInsurance.objects.create(
+                insurance=insurance,
+                vessel_type=vessel_type,
+                cargo_type=cargo_type,
+                voyage_type=voyage_type,
+                coverage_type=coverage_type,
+                price=price
+            )
+
+            response = Response({
+                'message': 'Insurance created successfully',
+                'data': {
+                    'id': upload.id,
+                    'vessel_type': upload.vessel_type,
+                    'cargo_type': upload.cargo_type,
+                    'voyage_type': upload.voyage_type,
+                    'coverage_type': upload.coverage_type,
+                    'price': upload.price
+                }
+            }, status=status.HTTP_201_CREATED)
+
+            return response
+
+        except Insurance.DoesNotExist:
+            return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+# step3
+class MarineInsuranceBenefits(APIView):
+    def post(self, request):
+        data = request.data
+        limit_of_liability = data.get('limit_of_liability')
+        rate = data.get('rate')
+        price = data.get('price')
+        description = data.get('description')
+
+        try:
+            get_insurance_id = request.COOKIES.get('marine_insurance')
+            if not get_insurance_id:
+                return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # query insurance
+            insurance = Insurance.objects.get(id=get_insurance_id)
+
+            new_benefit = Benefit.objects.create(
+                insurance=insurance,
+                limit_of_liability=limit_of_liability,
+                rate=rate,
+                price=price,
+                description=description
+            )
+
+            return Response({
+                "message": "Benefits created successfully",
+                "data": {
+                    "id": new_benefit.id,
+                    "limit_of_liability": new_benefit.limit_of_liability,
+                    "rate": new_benefit.rate,
+                    "price": new_benefit.price,
+                    "description": new_benefit.description
+                }
+            })
+        except Insurance.DoesNotExist:
+            return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ----------------------------------------------------------------- GET QUOTE for Marine Insurance----------------------------------------------------#
+
+
+class CreateMarineInsuranceSession(APIView):
+    def post(self, request):
+        data = request.data
+        # Basic user information
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        email = data.get('email')
+        yob = data.get('yob')
+        occupation = data.get('occupation')
+        gender = data.get('gender')
+        id_no = data.get('id')
+        phoneNumber = data.get('phoneNumber')
+        
+        # Vehicle information
+        vessel_type = data.get('vessel_type')
+        coverage_type = data.get('coverage_type')
+
+
+        try:
+            # Correctly construct the dictionary
+            user_details = {
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "yob": yob,
+                "id_no": id_no,
+                "occupation": occupation,
+                "gender": gender,
+                "phoneNumber": phoneNumber,
+                "vessel_type": vessel_type,
+                "coverage_type": coverage_type,
+            }
+            
+            # Serialize the dictionary to JSON
+            user_details_json = json.dumps(user_details)
+            sign = Signer()
+            signed_data = sign.sign(user_details_json)
+            # Create the response and set the cookie
+            response = Response({"message": "Marine Insurance session created successfully"}, status=status.HTTP_201_CREATED)
+            response.set_cookie(
+                key="user_marine_details",
+                value=signed_data,
+                httponly=True,
+                samesite='None',
+                secure=False,  # Set to True in production
+                max_age=3600,  # 1 hour
+            )
+            # print(yob)
+
+            return response
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+# ----------------------------------------------------------------- GET QUOTE for Marine Insurance----------------------------------------------------#
+
+class FilterMotorInsurance(APIView):
+    def get(self, request):
+        try:
+            # Retrieve and decode the cookie
+            signed_data = request.COOKIES.get('user_marine_details')
+            if not signed_data:
+                return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Unsigned and deserialize the cookie data
+            sign = Signer()
+            user_details_json = sign.unsign(signed_data)
+            user_details = json.loads(user_details_json)
+            
+            # Extract filter parameters from the cookie
+            vessel_type = user_details.get('vessel_type')
+            coverage_type = user_details.get('coverage_type')
+            insurance_type = "Marine"  # We're filtering for marine insurance
+            
+            # Step 1: Query the Insurance model for the relevant policies
+            insurance_queryset = Insurance.objects.filter(type=insurance_type)
+            
+            if not insurance_queryset.exists():
+                return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
+            
+            marine_queryset = MarineInsurance.objects.filter(insurance__in=insurance_queryset)
+            # Step 2: Query the MotorInsurance model for the specific details
+            
+            # Apply additional filters
+            if vessel_type:
+                marine_queryset = marine_queryset.filter(vessel_type=vessel_type)
+            if coverage_type:
+                marine_queryset = marine_queryset.filter(coverage_type=coverage_type)
+            
+            if not marine_queryset.exists():
+                return Response({'message': 'No marine insurance policies match the given filters'}, status=status.HTTP_404_NOT_FOUND)
+            
+# Step 3: Serialize the results
+            policies_data = []
+            for marine_policy in marine_queryset:
+                # Get the associated benefits for this insurance policy
+                benefits = Benefit.objects.filter(insurance=marine_policy.insurance)
+                benefits_data = [
+                    {
+                        'limit_of_liability': benefit.limit_of_liability,
+                        'rate': benefit.rate,
+                        'price': benefit.price,
+                        'description': benefit.description,
+                    }
+                    for benefit in benefits
+                ]
+                
+                # Add the marine policy and its benefits to the response
+                policies_data.append({
+                    'id': marine_policy.id,
+                    'vessel_type': marine_policy.vessel_type,
+                    'coverage_type': marine_policy.coverage_type,
+                    'price': marine_policy.price,
+                    'insurance_title': marine_policy.insurance.title,
+                    'organisation_name': marine_policy.insurance.organisation.company_name,
+                    'benefits': benefits_data,  # Include benefits in the response
+                })
+            
+            # Return the filtered results
+            return Response({
+                'message': 'Filtered marine insurance policies retrieved successfully',
                 'data': policies_data
             }, status=status.HTTP_200_OK)
 
