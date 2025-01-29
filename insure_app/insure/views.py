@@ -360,7 +360,8 @@ class HealthInsuaranceSession(APIView):
         try:
             data = request.data
             # Basic user information
-            name= data.get('name')
+            firstname= data.get('firstname')
+            lastname= data.get('lastname')
             dob= data.get('dob')
             national_id= data.get('national_id')
             occupation= data.get('occupation')
@@ -383,7 +384,7 @@ class HealthInsuaranceSession(APIView):
             allergies = data.get('allergies', False)
             mental_health = data.get('mental_health', False)
 
-            if not all([name, dob, national_id, occupation, phone_number,gender,coverage_amount, coverage_type]):
+            if not all([firstname, dob, national_id, occupation, phone_number,gender,coverage_amount, coverage_type]):
                 return Response({'error': 'All fields are required'}, status=status.HTTP_400_BAD_REQUEST)
 
             if is_travel_related == 'true':
@@ -405,7 +406,8 @@ class HealthInsuaranceSession(APIView):
             else:            
                 # post data        
                 new_quote_request= HealthInsuaranceQuoteRequest.objects.create(
-                                                                name= name, 
+                                                                first_name= firstname, 
+                                                                last_name=lastname,
                                                                 national_id=national_id, 
                                                                 dob=dob, occupation=occupation, 
                                                                 phone_number=phone_number, 
@@ -435,8 +437,8 @@ class HealthInsuaranceSession(APIView):
             
             if new_lifestyle:
                 response_data= {
-                    "name": name,
-                    "national_id": national_id,
+                    "firstname": firstname,
+                    "lastname": lastname,                    "national_id": national_id,
                     "dob": dob,
                     "occupation": occupation,
                     "phone_number": phone_number,
@@ -474,7 +476,7 @@ class HealthInsuaranceSession(APIView):
                     secure=False, # to be switched to true in production
                 )
                 response.data = {
-                    'message': f'Welcome {name} ',
+                    'message': f'Welcome {firstname} ',
                     'data':response_data
                 }
                 return response
@@ -695,6 +697,203 @@ class FilterMotorInsurance(APIView):
             # Return the filtered results
             return Response({
                 'message': 'Filtered motor insurance policies retrieved successfully',
+                'data': policies_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+#=============================Upload health insuarance policy---------------------------------------------------------------------------
+class UploadHealthInsurance(APIView):
+    def post(self, request):
+        data = request.data
+        type = 'Health'
+        title = data.get('title')
+        description = data.get('description')
+        image= data.get('image')
+
+        try:
+            # Retrieve user from token
+            user = get_user_from_token(request)
+
+            # Retrieve organisation associated with the user
+            organisation = get_organisation_from_user(user)
+
+            # Create a new insurance entry
+            new_insurance = Insurance.objects.create(
+                organisation=organisation,
+                type=type,
+                title=title,
+                description=description,
+                insurance_image=image
+            )
+
+            response = Response({
+                'message': 'Insurance created successfully',
+                'data': {
+                    'id': new_insurance.id,
+                    'type': new_insurance.type,
+                    'title': new_insurance.title,
+                    'description': new_insurance.description
+                }
+            }, status=status.HTTP_201_CREATED)
+
+            response.set_cookie(
+                key='healthinsurance',
+                value=new_insurance.id,
+                httponly=True,
+                samesite='None',
+                secure=False,
+                max_age=3600  # 1 hour
+            )
+            return response
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Health details----------------------------------------------------------------------------------------------------------------
+class HealthInsuranceDetails(APIView):
+    def post(self, request):
+        data = request.data
+        cover_type = data.get('cover_type')
+        price = data.get("price")
+        high_range = data.get("highrange")
+        low_range = data.get("lowrange")
+
+        try:
+            get_insurance_id = request.COOKIES.get('healthinsurance')
+            if not get_insurance_id:
+                return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # query insurance
+            insurance = Insurance.objects.get(id=get_insurance_id)
+
+
+            upload = HealthInsurance.objects.create(
+                insurance=insurance,
+                cover_type=cover_type,
+                price=price,
+                high_range=high_range,
+                low_range=low_range
+            )
+
+            response = Response({
+                'message': 'Insurance created successfully',
+                'data': {
+                    'id': upload.id,
+                    'cover_type': upload.cover_type,
+                    'price': upload.price,
+                    'high_range': upload.high_range,
+                    'low_range': upload.low_range
+                }
+            }, status=status.HTTP_201_CREATED)
+
+            return response
+
+        except Insurance.DoesNotExist:
+            return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# Health benefites-----------------------------------------------------------------
+class HealthInsuranceBenefits(APIView):
+    def post (self, request):
+        data = request.data
+        limit_of_liability = data.get('limit_of_liability')
+        rate = data.get('rate')
+        description = data.get('description')
+
+        try:
+            get_insurance_id = request.COOKIES.get('healthinsurance')
+            if not get_insurance_id:
+                return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # query insurance
+            insurance = Insurance.objects.get(id=get_insurance_id)
+
+            health_insuarance= HealthInsurance.objects.get(insurance=insurance)
+            price= health_insuarance.price*rate/100
+
+            new_benefit = Benefit.objects.create(
+                insurance=insurance,
+                limit_of_liability=limit_of_liability,
+                rate=rate,
+                price=price,
+                description=description
+            )
+
+            return Response({
+                "message":"Benefits created successfully",
+                "data":{
+                    "id":new_benefit.id,
+                    "limit_of_liability":new_benefit.limit_of_liability,
+                    "rate":new_benefit.rate,
+                    "price":new_benefit.price,
+                    "description":new_benefit.description
+                }
+            })
+        except Insurance.DoesNotExist:
+            return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class FilterHealthInsurance(APIView):
+    def get(self, request):
+        try:
+            # Retrieve and decode the cookie
+            signed_data = request.COOKIES.get('healthsession')
+            if not signed_data:
+                return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get data from jwt token
+            try:
+                user_details = jwt.decode(signed_data, config("SECRET"), algorithms=['HS256'])
+                if not user_details:
+                    return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+            except jwt.ExpiredSignatureError:
+                return Response({'error': 'Token has expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            # Extract filter parameters from the cookie
+            cover_type = user_details.get('coverage_type')
+            insurance_type = "Health"  # We're filtering for health insurance
+
+            # Step 1: Query the Insurance model for the relevant policies
+            insurance_queryset = Insurance.objects.filter(type=insurance_type)
+
+            if not insurance_queryset.exists():
+                return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Step 2: Query the HealthInsurance model for the specific details
+            health_queryset = HealthInsurance.objects.filter(insurance__in=insurance_queryset)
+
+            # Apply additional filters
+            if cover_type:
+                health_queryset = health_queryset.filter(cover_type=cover_type)
+
+            if not health_queryset.exists():
+                return Response({'message': 'No health insurance policies match the given filters'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Step 3: Serialize the results
+            policies_data = [
+                {
+                    'id': health_policy.id,
+                    'cover_type': health_policy.cover_type,
+                    'price': health_policy.price,
+                    'insurance_title': health_policy.insurance.title,
+                    'organisation_name': health_policy.insurance.organisation.company_name,
+                }
+                for health_policy in health_queryset
+            ]
+
+            # Return the filtered results
+            return Response({
+                'message': 'Filtered health insurance policies retrieved successfully',
                 'data': policies_data
             }, status=status.HTTP_200_OK)
 
