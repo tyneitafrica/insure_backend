@@ -90,7 +90,7 @@ class Organisation(models.Model):
         return f"{self.company_name}"
 
 
-# Insurance Base Model
+# Insurance Base Model(org)
 class Insurance(models.Model):
     TYPE_CHOICES = [
         ("Motor", "Motor"),
@@ -114,7 +114,7 @@ class Insurance(models.Model):
 
 
 
-# Motor Insurance Model
+# Motor Insurance Model(org)
 class MotorInsurance(models.Model):
     insurance = models.OneToOneField(Insurance, on_delete=models.CASCADE, related_name='motor_details')
     vehicle_type = models.CharField(max_length=100)  # e.g., Private, Commercial
@@ -131,7 +131,7 @@ class MotorInsurance(models.Model):
         return f"{self.vehicle_registration_number} - {self.cover_type}"
 
 
-# Health Insurance Model
+# Health Insurance Model(org)
 class HealthInsurance(models.Model):
     insurance = models.OneToOneField(Insurance, on_delete=models.CASCADE, related_name='health_details')
     health_type = models.CharField(max_length=100)  # e.g., Individual, Family
@@ -163,8 +163,8 @@ class HealthInsuaranceQuoteRequest(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 class HealthLifestyle(models.Model):
-    # one on one relation
-    health_insuarance_quote_request = models.OneToOneField(HealthInsuaranceQuoteRequest, on_delete=models.CASCADE, related_name='health_lifestyle')
+    # one to many relation
+    health_insuarance_quote_request= models.ForeignKey(HealthInsuaranceQuoteRequest, on_delete=models.CASCADE, related_name='lifestyle')
     pre_existing_condition= models.BooleanField(default=False)
     high_risk_activities= models.BooleanField(default=False)    
     medication= models.BooleanField(default=False)
