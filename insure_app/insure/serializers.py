@@ -105,7 +105,7 @@ class HealthInsuranceQuoteRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'updated_at')
 
 class HealthLifestyleSerializer(serializers.ModelSerializer):
-    health_insurance_quote_request = HealthInsuranceQuoteRequestSerializer()  # Nested serializer
+    health_insuarance_quote_request = HealthInsuranceQuoteRequestSerializer()  # Nested serializer
 
     class Meta:
         model = HealthLifestyle

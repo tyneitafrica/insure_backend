@@ -30,9 +30,9 @@ urlpatterns = [
     path("api/v1.0/organisation/login/", LoginOrganisation.as_view(), name="login org"),
 
 
-    path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),
-    path("api/v1.0/applicant/temp_motor_insurance/", MotorInsuranceTempData.as_view(), name="create temporary_motorinsurance"),   
+    path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),   
 
-    path("api/healthinsuarancesession/", HealthInsuaranceSession.as_view(), name="create health insurance session"),
+    path("api/v1.0/health-insuarance-session/", HealthInsuaranceSession.as_view(), name="create health insurance session"),
+    path("api/v1.0/get-auth-quotes/", GetHealthInsuranceQuote.as_view(), name="get user quotes"),
 
 ]
