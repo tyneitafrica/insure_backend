@@ -125,6 +125,8 @@ class MotorInsurance(models.Model):
 # Health Insurance Model
 class HealthInsurance(models.Model):
     insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='health_details')
+    high_range= models.IntegerField()
+    low_range= models.IntegerField()
     cover_type = models.CharField(max_length=100)  # e.g., Individual, Family
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -150,7 +152,8 @@ class HealthInsuaranceQuoteRequest(models.Model):
         FEMALE= 'FEMALE', 'Female'
         OTHER= 'OTHER', 'Other'
 
-    name= models.CharField(max_length=100, null=True, blank=True)
+    first_name= models.CharField(max_length=100, null=True, blank=True)
+    last_name= models.CharField(max_length=100, null=True, blank=True)
     dob= models.DateField(null=True, blank=True)
     national_id= models.BigIntegerField()
     occupation= models.CharField(max_length=200, null=True, blank=True)
