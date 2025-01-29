@@ -27,12 +27,19 @@ class ApplicantAdmin(admin.ModelAdmin):
 
 admin.site.register(Applicant, ApplicantAdmin)
 
-# class InsuranceAdmin(admin.ModelAdmin):
-#     list_display  = ('title', 'insurance_type', 'cover_type', 'description', 'price', 'created_at', 'updated_at')
-#     search_fields = ('title', 'insurance_type')
-#     list_filter   = ('insurance_type', 'cover_type')
+class InsuranceAdmin(admin.ModelAdmin):
+    list_display  = ('title', 'type', 'description','created_at', 'updated_at')
+    search_fields = ('title', 'type')
+    list_filter   = ('type', 'title')
 
-# admin.site.register(Insurance, InsuranceAdmin)
+admin.site.register(Insurance, InsuranceAdmin)
+
+class MotorInsuranceAdmin(admin.ModelAdmin):
+    list_display  = ('insurance', 'cover_type','price')
+    search_fields = ['cover_type']
+    list_filter   = ['cover_type']
+
+admin.site.register(MotorInsurance, MotorInsuranceAdmin)
 
 class PolicyAdmin(admin.ModelAdmin):
     list_display  = ('applicant', 'insurance', 'start_date', 'end_date', 'duration', 'created_at', 'updated_at')

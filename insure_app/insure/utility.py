@@ -3,6 +3,10 @@ from django.core.signing import Signer, BadSignature
 from rest_framework.exceptions import AuthenticationFailed
 import random
 import string
+# import jwt
+# from decouple import config
+# from rest_framework.response import Response
+# from rest_framework import status
 
 # import uuid
 def generate_otp():
@@ -22,3 +26,8 @@ def get_user_from_cookie(cookie):
         return user_motor_details
     except BadSignature:
         raise AuthenticationFailed('Invalid cookie signature')
+    
+
+
+
+
