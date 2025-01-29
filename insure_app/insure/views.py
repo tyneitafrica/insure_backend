@@ -14,6 +14,26 @@ from .utility import *
 
 # Create your views here.
 
+# ====Function to get user from token=======================================================================                          
+def get_user_from_token(request):
+    token = request.COOKIES.get('jwt')
+    if not token:
+        raise AuthenticationFailed("Token not in request header")
+
+    try:
+        payload = jwt.decode(token, config("SECRET"), algorithms=['HS256'])
+    except jwt.ExpiredSignatureError:
+        response = Response({'error': 'Unauthenticated user'}, status=status.HTTP_401_UNAUTHORIZED)
+        response.delete_cookie('jwt')
+        return response
+
+    user = User.objects.filter(id=payload['id']).first()
+    if not user:
+        response = Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        response.delete_cookie('jwt')
+        return response
+
+    return user
 
 
 # -----------------------------------------------------------------  Signup USER ----------------------------------------------------#
@@ -347,9 +367,6 @@ class HealthInsuaranceSession(APIView):
                 new_quote_request.save()
 
             if new_quote_request:
-                user_quote= HealthLifestyle.objects.filter(health_insuarance_quote_request=new_quote_request).first()
-                if user_quote:
-                    user_quote.delete()
                     
                 new_lifestyle= HealthLifestyle.objects.create(health_insuarance_quote_request=new_quote_request,
                                                 pre_existing_condition=pre_existing_condition,
@@ -414,4 +431,33 @@ class HealthInsuaranceSession(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# =======================Route to get quotes for authenticated applicants=====================================================
+class GetHealthInsuranceQuote(APIView):
+    def get(self, request):
+        try:
+            # Get user from login cookie
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.role != User.Role.APPLICANT:
+                return Response({'error': 'Unauthorized user'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            applicant= Applicant.objects.filter(user=user).first()
+            # Get user quote
+            user_quote= HealthInsuaranceQuoteRequest.objects.filter(national_id=applicant.id_no).first()
+            if not user_quote:
+                return Response({'error': 'Quote not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Get user lifestyle
+            user_lifestyle= HealthLifestyle.objects.filter(health_insuarance_quote_request=user_quote).all()
+
+            if not user_lifestyle:
+                return Response({'error': 'Lifestyle not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # serialize user lifestyle
+            serializer= HealthLifestyleSerializer(user_lifestyle, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
