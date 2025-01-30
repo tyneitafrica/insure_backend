@@ -47,7 +47,7 @@ class OrganisationSerializer(serializers.ModelSerializer):
 class InsuranceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Insurance
-        fields = ['id', 'organisation', 'insurance_image','title', 'type', 'description','created_at', 'updated_at']
+        fields = ['id', 'organisation', 'insurance_image','title', 'type', 'description']
         read_only_fields = ('created_at', 'updated_at')
 
 
@@ -70,10 +70,6 @@ class HealthInsuranceSerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'updated_at')
 
 
-class BenefitSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Benefit
-        fields = ['id', 'insurance', 'limit_of_liability', 'rate', 'price', 'description', 'created_at', 'updated_at']
 
 
 class PolicySerializer(serializers.ModelSerializer):
@@ -136,5 +132,29 @@ class HealthLifestyleSerializer(serializers.ModelSerializer):
             setattr(instance, key, value)
         instance.save()
         return instance
+
+class BenefitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Benefit
+        fields = ['id', 'limit_of_liability', 'rate', 'price', 'description']
+
+class MotorInsuranceSerializer(serializers.ModelSerializer):
+    insurance = InsuranceSerializer(read_only=True)
+    benefits = BenefitSerializer(source='insurance.benefits', many=True, read_only=True)  # Fix here
+
+    class Meta:
+        model = MotorInsurance
+        fields = ['id', 'insurance', 'vehicle_type', 'cover_type', 'price', 'benefits']
+        read_only_fields = ('created_at', 'updated_at')
+
+
+class MarineInsuranceSerializer(serializers.ModelSerializer):
+    insurance = InsuranceSerializer(read_only=True)
+    benefits = BenefitSerializer(source='insurance.benefits', many=True, read_only=True)  # Fix here
+
+    class Meta:
+        model = MarineInsurance
+        fields = ['insurance','vessel_type','cargo_type','voyage_type','coverage_type','price','benefits']
+        read_only_fields = ('created_at', 'updated_at')
 
 
