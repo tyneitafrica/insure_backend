@@ -45,16 +45,18 @@ urlpatterns = [
     path("api/v1.0/health-insurance/filter/", FilterHealthInsurance.as_view(), name="filter health insurance"),
 
     # Motor
-    path("api/v1.0/motorinsurance/upload/",UploadMotorInsurance.as_view(), name="create health insurance step1"),
+    path("api/v1.0/motorinsurance/",UploadMotorInsurance.as_view(), name="create motor insurance step1"),  # will handle post and get for motor insurance 
     path("api/v1.0/motorinsurance/details/",MotorInsuranceDetails.as_view(), name="create health insurance step2"),
     path("api/v1.0/motorinsurance/benefits/",MotorInsuranceBenefits.as_view(), name="create health insurance step3"),
-    path("api/v1.0/motorinsurance/filter/",FilterMotorInsurance.as_view(), name="filter motor insurance"),
+    path("api/v1.0/motorinsurance/filter/",FilterMotorInsurance.as_view(), name="filter motor insurance"),  #will handle the filter for getting quotes
+    path("api/v1.0/motorinsurance/<int:id>/", EditMotorInsurance.as_view(), name="edit motor insurance"), #will handle the patch and delete of motor insurance
 #    upload marine section 
     path("api/v1.0/applicant/marine_session/", CreateMarineInsuranceSession.as_view(), name="create insurance session"),
-    path("api/v1.0/marineinsurance/upload/", MarineInsuranceUpload.as_view(), name="create  marine insurance step 1"),  
+    path("api/v1.0/marineinsurance/", MarineInsuranceUpload.as_view(), name="create  marine insurance step 1"),  
     path("api/v1.0/marineinsurance/details/", MarineInsuranceDetails.as_view(), name="create marine insurance step 2"),
     path("api/v1.0/marineinsurance/benefits/", MarineInsuranceBenefits.as_view(), name="create marine insurance step3 "),
     path("api/v1.0/marineinsurance/filter/",FilterMotorInsurance.as_view(), name="filter marine insurance"),
+    path("api/v1.0/marineinsurance/<int:id>/", UpdateMarineInsurance.as_view(), name="edit marine insurance"), #will handle the patch and delete of marine insurance
 
 
 ]
