@@ -14,63 +14,37 @@ from .utility import *
 
 # Create your views here.
 # unsign cookie 
-def get_user_from_cookie(cookie):
-    signer = Signer()
-    if not cookie:
-        raise AuthenticationFailed('User ID not found in cookies')
-
-    try:
-        user_motor_details = signer.unsign(cookie)
-        return user_motor_details
-    except BadSignature:
-        raise AuthenticationFailed('Invalid cookie signature')
-    
-def get_user_from_token(request):
-    token = request.COOKIES.get('jwt')
-    if not token:
-        raise AuthenticationFailed("Token is missing from the request.")
-
-    try:
-        payload = jwt.decode(token, config("SECRET"), algorithms=['HS256'])
-    except jwt.ExpiredSignatureError:
-        raise AuthenticationFailed("Token has expired.")
-    except jwt.InvalidTokenError:
-        raise AuthenticationFailed("Invalid token.")
-
-    user = User.objects.filter(id=payload['id']).first()
-    if not user:
-        raise AuthenticationFailed("User not found.")
-
-    return user
-
-def get_organisation_from_user(user):
-    organisation = Organisation.objects.filter(user=user).first()
-    if not organisation:
-        raise ValueError("Organisation not found.")
-    return organisation
 # ====Function to get user from token=======================================================================                          
+from rest_framework.exceptions import AuthenticationFailed
+import jwt
+from django.core.signing import Signer, BadSignature
+from decouple import config
+from .models import User, Organisation
+
+# Load secret key from environment variables
+SECRET_KEY = config("SECRET")
+
 def get_user_from_token(request):
     token = request.COOKIES.get('jwt')
     if not token:
         raise AuthenticationFailed("Token not in request header")
 
     try:
-        payload = jwt.decode(token, config("SECRET"), algorithms=['HS256'])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
     except jwt.ExpiredSignatureError:
-        response = Response({'error': 'Unauthenticated user'}, status=status.HTTP_401_UNAUTHORIZED)
-        response.delete_cookie('jwt')
-        return response
+        raise AuthenticationFailed("Token has expired. Please log in again.")
+    except jwt.InvalidTokenError:
+        raise AuthenticationFailed("Invalid token.")
 
-    user = User.objects.filter(id=payload['id']).first()
+    user = User.objects.filter(id=payload.get('id')).first()
     if not user:
-        response = Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-        response.delete_cookie('jwt')
-        return response
+        raise AuthenticationFailed("User not found.")
 
     return user
 
 def get_user_from_cookie(cookie):
     signer = Signer()
+    
     if not cookie:
         raise AuthenticationFailed('User ID not found in cookies')
 
@@ -79,12 +53,14 @@ def get_user_from_cookie(cookie):
         return user_motor_details
     except BadSignature:
         raise AuthenticationFailed('Invalid cookie signature')
-    
+
 def get_organisation_from_user(user):
     organisation = Organisation.objects.filter(user=user).first()
     if not organisation:
-        raise ValueError("Organisation not found.")
+        raise AuthenticationFailed("Organisation not found.")
+
     return organisation
+
 
 
 # -----------------------------------------------------------------  Signup USER ----------------------------------------------------#
@@ -517,6 +493,41 @@ class GetHealthInsuranceQuote(APIView):
         
 # ----------------------------------------------------------------- Upload insurance policy ----------------------------------------------------#
 class UploadMotorInsurance(APIView):
+    
+    def get(self, request):
+        try:
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # # Retrieve organisation associated with the user
+            organisation = get_organisation_from_user(user)
+            print(organisation)
+            
+            # Query Insurance for Motor type
+            insurance_queryset = Insurance.objects.filter(organisation=organisation, type='Motor')
+            if not insurance_queryset.exists():
+                return Response({'message': 'No Motor insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            
+            # # Query MotorInsurance and related data
+            motor_insurances = MotorInsurance.objects.filter(insurance__in=insurance_queryset).select_related('insurance')
+            if not motor_insurances.exists():
+                return Response({'message': 'No Motor insurance details found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            
+            serializer = MotorInsuranceSerializer(motor_insurances, many=True)
+            
+            # Return the response
+            return Response({
+                'message': 'Motor insurance policies retrieved successfully',
+                'data': serializer.data,
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    
     def post(self, request):
         data = request.data
         type = 'Motor'
@@ -705,9 +716,94 @@ class FilterMotorInsurance(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 
+
+class EditMotorInsurance(APIView):
+    def get_object(self, id):
+        
+        try:
+            return MotorInsurance.objects.get(id=id)
+        except MotorInsurance.DoesNotExist:
+            return Response(
+                {'error': 'MotorInsurance not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    def patch(self, request, id):
+
+        motor_insurance = self.get_object(id)
+        if isinstance(motor_insurance, Response):  # If the object was not found
+            return motor_insurance
+
+        # Serialize the instance with the incoming data
+        serializer = MotorInsuranceSerializer(motor_insurance, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'message': 'MotorInsurance updated successfully',
+                'data': serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,id):
+        try:
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # # Retrieve organisation associated with the user
+            organisation = get_organisation_from_user(user)
+            print(organisation)
+            
+            # Query Insurance for Motor type
+            insurance_queryset = Insurance.objects.filter(organisation=organisation, type='Motor',id=id)
+            if not insurance_queryset.exists():
+                return Response({'message': 'No Motor insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            insurance_queryset.delete()
+            return Response({'message': 'Motor insurance deleted successfully'}, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
 # ----------------------------------------------------------------- Upload Marine insurance policy ----------------------------------------------------#
 # step 1
 class MarineInsuranceUpload(APIView):
+    
+    def get(self, request):
+        try:
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # # Retrieve organisation associated with the user
+            organisation = get_organisation_from_user(user)
+            print(organisation)
+            
+            # Query Insurance for Motor type
+            insurance_queryset = Insurance.objects.filter(organisation=organisation, type='Marine')
+            if not insurance_queryset.exists():
+                return Response({'message': 'No Marine insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            
+            # # Query MotorInsurance and related data
+            marine_insurances = MarineInsurance.objects.filter(insurance__in=insurance_queryset).select_related('insurance')
+            if not marine_insurances.exists():
+                return Response({'message': 'No Marine insurance details found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            
+            serializer = MarineInsuranceSerializer(marine_insurances, many=True)
+            
+            # Return the response
+            return Response({
+                'message': 'Marine insurance policies retrieved successfully',
+                'data': serializer.data,
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
     def post(self,request):
         data = request.data
         type = 'Marine'
@@ -1168,5 +1264,30 @@ class FilterHealthInsurance(APIView):
                 'data': policies_data
             }, status=status.HTTP_200_OK)
 
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+# patch and delete marine insurance 
+
+class UpdateMarineInsurance(APIView):
+    def delete(self,request,id):
+        try:
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # # Retrieve organisation associated with the user
+            organisation = get_organisation_from_user(user)
+            print(organisation)
+            
+            # Query Insurance for Motor type
+            insurance_queryset = Insurance.objects.filter(organisation=organisation, type='Marine',id=id)
+            if not insurance_queryset.exists():
+                return Response({'message': 'No Marine insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            insurance_queryset.delete()
+            return Response({'message': 'Marine insurance deleted successfully'}, status=status.HTTP_200_OK)
+            
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
