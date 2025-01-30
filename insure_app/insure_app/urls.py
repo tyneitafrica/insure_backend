@@ -58,5 +58,9 @@ urlpatterns = [
     path("api/v1.0/marineinsurance/filter/",FilterMotorInsurance.as_view(), name="filter marine insurance"),
     path("api/v1.0/marineinsurance/<int:id>/", UpdateMarineInsurance.as_view(), name="edit marine insurance"), #will handle the patch and delete of marine insurance
 
+    # uload applicant kyc 
+    path("api/v1.0/applicant/kyc/", ApplicantkycUpload.as_view(), name="kyc"),
+
+
 
 ]
