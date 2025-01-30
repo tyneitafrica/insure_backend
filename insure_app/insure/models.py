@@ -66,6 +66,7 @@ class Applicant(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+
     @property
     def age(self):
         """Calculate age based on year of birth."""
@@ -76,6 +77,17 @@ class Applicant(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.occupation}"
+    
+class ApplicantKYC(models.Model):
+    applicant = models.OneToOneField(Applicant, on_delete=models.CASCADE, related_name='kyc_details')
+    national_id  = models.ImageField(upload_to='national_id_images/', null=True, blank=True)
+    driving_license = models.ImageField(upload_to='driving_license_images/', null=True, blank=True)
+    valuation_report = models.ImageField(upload_to='valuation_report_images/', null=True, blank=True)
+    kra_pin_certificate = models.ImageField(upload_to='kra_pin_certificate_images/', null=True, blank=True)
+    log_book = models.ImageField(upload_to='log_book_images/', null=True, blank=True) 
+
+    def __str__(self):
+        return f"{self.applicant}"
 
 
 # Organisation Model
