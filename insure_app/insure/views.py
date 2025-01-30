@@ -61,6 +61,13 @@ def get_organisation_from_user(user):
 
     return organisation
 
+def get_applicant_from_user(user):
+    applicant = Applicant.objects.filter(user=user).first()
+    if not applicant:
+        raise AuthenticationFailed("User not found.")
+
+    return applicant
+
 
 
 # -----------------------------------------------------------------  Signup USER ----------------------------------------------------#
@@ -108,8 +115,8 @@ class SignupUser(APIView):
 
 
 # -----------------------------------------APPLICANT LOGIN ----------------------------------#
-
 class LoginApplicant(APIView):
+
     def post(self,request):
         email = request.data['email']
         password = request.data['password']
@@ -1268,7 +1275,7 @@ class FilterHealthInsurance(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 
-# patch and delete marine insurance 
+#----------------------------------------------------------------------- patch and delete marine insurance --------------------------------------------------# 
 
 class UpdateMarineInsurance(APIView):
     def delete(self,request,id):
@@ -1289,5 +1296,46 @@ class UpdateMarineInsurance(APIView):
             insurance_queryset.delete()
             return Response({'message': 'Marine insurance deleted successfully'}, status=status.HTTP_200_OK)
             
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+#----------------------------------------------------------------------- KYC FOR MOTOR INSURACE  --------------------------------------------------# 
+
+class ApplicantkycUpload(APIView):
+    def post(self, request):
+        data = request.FILES 
+        # Motor insurane
+        national_id = data.get('national_id')
+        driving_license = data.get('driving_license')
+        valuation_report = data.get('valuation_report')
+        kra_pin_certificate = data.get('kra_pin_certificate')
+        log_book = data.get('log_book')
+
+        try:
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # # Retrieve organisation associated with the user
+            applicant = get_applicant_from_user(user)
+            print(applicant)
+
+            ApplicantKYC.objects.create(
+                applicant=applicant,
+                national_id=national_id,
+                driving_license=driving_license,
+                valuation_report=valuation_report,
+                kra_pin_certificate=kra_pin_certificate,
+                log_book=log_book
+            )
+
+            response = Response({
+                'message': 'KYC created successfully',
+            }, status=status.HTTP_201_CREATED)
+
+            return response
+
+        except Applicant.DoesNotExist:
+            return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
