@@ -33,7 +33,6 @@ urlpatterns = [
     path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),   
 
     
-    path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),
 
     # Health
     path("api/v1.0/health-insuarance-session/", HealthInsuaranceSession.as_view(), name="create health insurance session"),
