@@ -160,6 +160,7 @@ AUTH_USER_MODEL = "insure.User"  # register the User table that will act as a co
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:5173"
 ]
 
 CORS_ALLOW_HEADERS = [

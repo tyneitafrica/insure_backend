@@ -249,11 +249,10 @@ class MotorInsuranceTempData(models.Model):
     vehicle_year = models.IntegerField()
     vehicle_value = models.DecimalField(max_digits=100, decimal_places=2)
     cover_start_date = models.DateField()
-    is_evaluated = models.BooleanField(default=False)
+    is_evaluated = models.BooleanField(default=True)
     evaluated_price = models.DecimalField(max_digits=100,decimal_places=2,null=True,blank=True)
     vehicle_registration_number = models.CharField(max_length=100)
-    insurance_type = models.CharField(
-    max_length=50,
+    insurance_type = models.CharField(max_length=50,
     choices=[
         ('comprehensive', 'Comprehensive'),
         ('third_party', 'Third Party'),
