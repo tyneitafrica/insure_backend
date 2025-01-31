@@ -310,7 +310,7 @@ class CreateMotorInsuranceSession(APIView):
                 value=signed_data,
                 httponly=True,
                 samesite='None',
-                secure=False,  # Set to True in production
+                secure=True,  # Set to True in production
                 max_age=3600,  # 1 hour
             )
             # print(yob)
@@ -1006,7 +1006,7 @@ class CreateMarineInsuranceSession(APIView):
 
 # ----------------------------------------------------------------- GET QUOTE for Marine Insurance----------------------------------------------------#
 
-class FilterMotorInsurance(APIView):
+class FilterMarineInsurance(APIView):
     def get(self, request):
         try:
             # Retrieve and decode the cookie
