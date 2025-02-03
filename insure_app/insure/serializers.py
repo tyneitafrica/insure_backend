@@ -99,7 +99,7 @@ class PolicySerializer(serializers.ModelSerializer):
 class HealthInsuranceQuoteRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = HealthInsuaranceQuoteRequest
-        fields = '__all__'
+        fields = ['first_name','last_name','dob','national_id','occupation','phone_number','gender','coverage_amount','coverage_type','is_travel_related','is_covered']
         read_only_fields = ('created_at', 'updated_at')
 
 class HealthLifestyleSerializer(serializers.ModelSerializer):
@@ -107,8 +107,10 @@ class HealthLifestyleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HealthLifestyle
-        fields = '__all__'
-        read_only_fields = ('created_at', 'updated_at')
+        fields = ['pre_existing_condition','high_risk_activities','medication',
+                  'mode_of_transport','smoking','past_claim',
+                  'stress_level','family_history','allergies','mental_health', 'health_insuarance_quote_request',]
+        read_only_fields = ('created_at', 'updated_at', 'health_insurance_quote_request')
 
     def create(self, validated_data):
         # Handle nested serializer creation for HealthInsuranceQuoteRequest
