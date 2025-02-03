@@ -42,6 +42,7 @@ urlpatterns = [
     path("api/v1.0/health-insuarance-session/details/", HealthInsuranceDetails.as_view(), name="create health insurance session"),
     path("api/v1.0/health-insuarance-session/benefits/", HealthInsuranceBenefits.as_view(), name="create health insurance session"),
     path("api/v1.0/health-insurance/filter/", FilterHealthInsurance.as_view(), name="filter health insurance"),
+    path("api/v1.0/health-insurance/<int:id>/", EditHealthInsurance.as_view(), name="edit health insurance"),
 
     # Motor
     path("api/v1.0/motorinsurance/",UploadMotorInsurance.as_view(), name="create motor insurance step1"),  # will handle post and get for motor insurance 
