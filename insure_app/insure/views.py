@@ -244,7 +244,8 @@ class LoginOrganisation(APIView):
             )
             response.data = {
                 'message': f'Welcome {user.first_name} ',
-                'jwt':token
+                'jwt':token,
+                'user': UserSerializer(user).data
             }
             return response
         except Exception as e:
@@ -339,6 +340,26 @@ class CreatePersonalInsuranceSession(APIView):
 
 # ----------------------------------------------------------------- GET QUOTE health Insurance----------------------------------------------------#
 class HealthInsuaranceSession(APIView):
+    def get(self, request):
+        try:
+            user= get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            if not user.Role.ORGANISATION:
+                return Response({'error': 'You are not authorized to access this page'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            health_insurance_quote= HealthLifestyle.objects.all()
+            if not health_insurance_quote:
+                return Response({'error': 'No quotes found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer= HealthLifestyleSerializer(health_insurance_quote, many=True)
+            
+            return Response(serializer.data, status=status.HTTP_200_OK)             
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
     def post(self, request):
         try:
             data = request.data
@@ -1129,6 +1150,8 @@ class UploadHealthInsurance(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# PATCH/DELETE/GET pass Insuarance ID
 
 # Health details----------------------------------------------------------------------------------------------------------------
 class HealthInsuranceDetails(APIView):
