@@ -346,7 +346,7 @@ class HealthInsuaranceSession(APIView):
             if not user:
                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
             
-            if not user.Role.ORGANISATION:
+            if user.role != user.Role.ORGANISATION:
                 return Response({'error': 'You are not authorized to access this page'}, status=status.HTTP_401_UNAUTHORIZED)
             
             health_insurance_quote= HealthLifestyle.objects.all()
@@ -1108,6 +1108,7 @@ class UploadHealthInsurance(APIView):
         title = data.get('title')
         description = data.get('description')
         image= data.get('image')
+        company_name= data.get('company_name')
 
         try:
             # Retrieve user from token
@@ -1119,6 +1120,7 @@ class UploadHealthInsurance(APIView):
             # Create a new insurance entry
             new_insurance = Insurance.objects.create(
                 organisation=organisation,
+                company_name= company_name,
                 type=type,
                 title=title,
                 description=description,
@@ -1152,9 +1154,100 @@ class UploadHealthInsurance(APIView):
             return Response({'error': f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # PATCH/DELETE/GET pass Insuarance ID
+class EditHealthInsurance(APIView):
+    def get(self, request, id):
+        try:
+            user= get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.role != user.Role.ORGANISATION:
+                return Response({'error': 'You are not authorized to access this page'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            type= "Health"
+            insuarance= Insurance.objects.filter(id=id, type=type).first()
+            if not insuarance:
+                return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            health_insure= HealthInsurance.objects.filter(insurance=insuarance).first()
+            if not health_insure:
+                return Response({'error': 'Health insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            benefits= Benefit.objects.filter(insurance=insuarance).all()
+            if not benefits:
+                return Response({'error': 'Benefits not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            response_data= {
+                "insurance": InsuranceSerializer(insuarance).data,
+                "health_insurance": HealthInsuranceSerializer(health_insure).data,
+                "benefits": BenefitSerializer(benefits, many=True).data
+            }
+
+            return Response({'data': response_data}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, id):
+        try:
+            user= get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.role != user.Role.ORGANISATION:
+                return Response({'error': 'You are not authorized to access this page'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            type= "Health"
+            insuarance= Insurance.objects.filter(id=id, type=type).first()
+            if not insuarance:
+                return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            data = request.data
+            title = data.get('title')
+            description = data.get('description')
+            image= data.FILES('image')
+            company_name= data.get('company_name')
+
+            if title:
+                insuarance.title= title
+            elif description:
+                insuarance.description= description
+            elif image:
+                insuarance.insurance_image= image
+            elif company_name:
+                insuarance.company_name= company_name
+            insuarance.save()
+
+            return Response({'message': 'Insurance updated successfully'}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, id):
+        try:
+            user= get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.role != user.Role.ORGANISATION:
+                return Response({'error': 'You are not authorized to access this page'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            type= "Health"
+            insuarance= Insurance.objects.filter(id=id, type=type).first()
+            if not insuarance:
+                return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            insuarance.delete()
+            return Response({'message': 'Insurance deleted successfully'}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 # Health details----------------------------------------------------------------------------------------------------------------
 class HealthInsuranceDetails(APIView):
+    def get(self, request):
+        pass
+
     def post(self, request):
         data = request.data
         cover_type = data.get('cover_type')
