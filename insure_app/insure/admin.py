@@ -28,8 +28,8 @@ class ApplicantAdmin(admin.ModelAdmin):
 admin.site.register(Applicant, ApplicantAdmin)
 
 class InsuranceAdmin(admin.ModelAdmin):
-    list_display  = ('title', 'type', 'description','created_at', 'updated_at')
-    search_fields = ('title', 'type')
+    list_display  = ('title', 'company_name', 'type', 'description','created_at', 'updated_at')
+    search_fields = ('title', 'type','company_name')
     list_filter   = ('type', 'title')
 
 admin.site.register(Insurance, InsuranceAdmin)
