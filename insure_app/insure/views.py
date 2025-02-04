@@ -561,6 +561,7 @@ class UploadMotorInsurance(APIView):
         type = 'Motor'
         title = data.get('title')
         description = data.get('description')
+        company_name = data.get("company_name")
 
         try:
             # Retrieve user from token
@@ -574,13 +575,15 @@ class UploadMotorInsurance(APIView):
                 organisation=organisation,
                 type=type,
                 title=title,
-                description=description
+                description=description,
+                company_name=company_name
             )
 
             response = Response({
                 'message': 'Insurance created successfully',
                 'data': {
                     'id': new_insurance.id,
+                    "company":new_insurance.company_name,
                     'type': new_insurance.type,
                     'title': new_insurance.title,
                     'description': new_insurance.description
@@ -610,6 +613,7 @@ class MotorInsuranceDetails(APIView):
         cover_type = data.get('cover_type')
         price = data.get("price")
         vehicle_type = data.get("vehicle_type")
+        rate = data.get("rate")
         
         try:
             get_insurance_id = request.COOKIES.get('motor_insurance')
@@ -624,7 +628,8 @@ class MotorInsuranceDetails(APIView):
                 insurance=insurance,
                 cover_type=cover_type,
                 price=price,
-                vehicle_type=vehicle_type
+                vehicle_type=vehicle_type,
+                rate = rate
             )
 
             response = Response({
@@ -632,7 +637,8 @@ class MotorInsuranceDetails(APIView):
                 'data': {
                     'id': upload.id,
                     'cover_type': upload.cover_type,
-                    'price': upload.price
+                    'price': upload.price,
+                    'rate':rate
                 }
             }, status=status.HTTP_201_CREATED)
 
@@ -684,7 +690,6 @@ class MotorInsuranceBenefits(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 class FilterMotorInsurance(APIView):
     def get(self, request):
         try:
@@ -699,40 +704,51 @@ class FilterMotorInsurance(APIView):
             user_details = json.loads(user_details_json)
             
             # Extract filter parameters from the cookie
-            vehicle_type = user_details.get('vehicle_type')
+            vehicle_category = user_details.get('vehicle_category')
             cover_type = user_details.get('cover_type')
+            vehicle_value = user_details.get('vehicle_value')  # New: Get vehicle value from session
             insurance_type = "Motor"  # We're filtering for motor insurance
-            
+            print(vehicle_value)
+            print(cover_type)
+            print(vehicle_category)
             # Step 1: Query the Insurance model for the relevant policies
             insurance_queryset = Insurance.objects.filter(type=insurance_type)
             
             if not insurance_queryset.exists():
-                return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'message': 'No Motor insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
             
             # Step 2: Query the MotorInsurance model for the specific details
             motor_queryset = MotorInsurance.objects.filter(insurance__in=insurance_queryset)
             
             # Apply additional filters
-            if vehicle_type:
-                motor_queryset = motor_queryset.filter(vehicle_type=vehicle_type)
+            if vehicle_category:
+                motor_queryset = motor_queryset.filter(vehicle_type=vehicle_category)
             if cover_type:
                 motor_queryset = motor_queryset.filter(cover_type=cover_type)
             
             if not motor_queryset.exists():
                 return Response({'message': 'No motor insurance policies match the given filters'}, status=status.HTTP_404_NOT_FOUND)
             
-            # Step 3: Serialize the results
-            policies_data = [
-                {
+            # Step 3: Calculate premiums and serialize the results
+            policies_data = []
+            for motor_policy in motor_queryset:
+                if motor_policy.cover_type == "Comprehensive":
+                    # Calculate premium dynamically for comprehensive cover
+                    premium = motor_policy.calculate_premium(vehicle_value)
+                    print(premium)
+                else:
+                    # Use fixed price for other cover types
+                    premium = motor_policy.price
+                
+                policies_data.append({
                     'id': motor_policy.id,
                     'vehicle_type': motor_policy.vehicle_type,
                     'cover_type': motor_policy.cover_type,
-                    'price': motor_policy.price,
+                    'rate': motor_policy.rate,  # Include rate in response
+                    'premium': premium,  # Include calculated premium
                     'insurance_title': motor_policy.insurance.title,
                     'organisation_name': motor_policy.insurance.organisation.company_name,
-                }
-                for motor_policy in motor_queryset
-            ]
+                })
             
             # Return the filtered results
             return Response({
@@ -755,6 +771,17 @@ class EditMotorInsurance(APIView):
                 {'error': 'MotorInsurance not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
+    
+    def get(self, request, id):
+        motor_insurance = self.get_object(id)
+        if isinstance(motor_insurance, Response):  # If the object was not found
+            return motor_insurance
+
+        serializer = MotorInsuranceSerializer(motor_insurance)
+        return Response({
+            'message': 'MotorInsurance retrieved successfully',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
 
     def patch(self, request, id):
 
