@@ -55,7 +55,7 @@ class MotorInsuranceSerializer(serializers.ModelSerializer):
     class Meta:
         model = MotorInsurance
         fields = [
-            'id', 'organisation', 'title', 'price', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'vehicle_year',
+            'id', 'organisation', 'title', 'price', 'rate', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'vehicle_year',
             'cover_start_date', 'vehicle_registration_number', 'cover_type', 'evaluated', 'vehicle_value', 'created_at', 'updated_at'
         ]
 
