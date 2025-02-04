@@ -7,6 +7,7 @@ from .manager import CustomUserManager
 from .utility import generate_otp
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from decimal import Decimal
 
 
 # Custom User Model
@@ -124,15 +125,42 @@ class Insurance(models.Model):
     def __str__(self):
         return f"{self.title} {self.type} {self.description} {self.organisation}"
 
-# Motor Insurance Model
 class MotorInsurance(models.Model):
+    COVER_TYPE_CHOICES = [
+        ("Comprehensive", "Comprehensive"),
+        ("Third Party", "Third Party"),
+        ("Third Party Fire and Theft", "Third Party Fire and Theft"),
+        ("Statutory Liability","Statutory Liability")
+    ]
+    VEHICLE_TYPE_CHOICES = [
+        ("Private", "Private"),
+        ("Commercial", "Commercial"),
+        ("PSV", "PSV"),
+        ("Motorcycle", "Motorcycle"),
+    ]
+
     insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='motor_details')
-    vehicle_type = models.CharField(max_length=100)  # e.g., saloon,bus,
-    cover_type = models.CharField(max_length=100)  # e.g., Comprehensive
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    vehicle_type = models.CharField(max_length=100, choices=VEHICLE_TYPE_CHOICES)  # e.g., Saloon, Bus, etc.
+    cover_type = models.CharField(max_length=100, choices=COVER_TYPE_CHOICES)  # e.g., Comprehensive
+    rate = models.DecimalField(max_digits=5, decimal_places=2,null=True,blank=True)  # Rate in percentage (e.g., 4.5 for 4.5%)
+    price = models.DecimalField(max_digits=100, decimal_places=2, null=True, blank=True)  #  used for fixed pricing for the other choices
 
     def __str__(self):
-        return f"{self.price} - {self.cover_type} - {self.insurance}"
+        return f"{self.cover_type} - {self.vehicle_type} - {self.insurance} - {self.rate}"
+
+    def calculate_premium(self, vehicle_value):
+        """
+        Calculate the premium based on the vehicle value and the rate.
+        """
+        if self.cover_type == "Comprehensive":
+            # Ensure both are of type Decimal
+            rate = Decimal(self.rate) if self.rate is not None else Decimal(0)
+            vehicle_value = Decimal(vehicle_value)  # Ensure vehicle_value is Decimal
+            premium = (rate / Decimal(100)) * vehicle_value
+            return premium
+        else:
+            return self.price if self.price is not None else Decimal(0)  # Ensure self.price is not None
+
 
 
 # Health Insurance Model
