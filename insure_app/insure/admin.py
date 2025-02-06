@@ -35,11 +35,30 @@ class InsuranceAdmin(admin.ModelAdmin):
 admin.site.register(Insurance, InsuranceAdmin)
 
 class MotorInsuranceAdmin(admin.ModelAdmin):
-    list_display  = ('insurance', 'cover_type','price')
+    list_display  = ('insurance', 'cover_type')
     search_fields = ['cover_type']
     list_filter   = ['cover_type']
 
 admin.site.register(MotorInsurance, MotorInsuranceAdmin)
+
+class RateRangesAdmin(admin.ModelAdmin):
+    list_display  = ('get_cover_type', 'min_year','max_year','min_value','max_value', 'rate','min_premium')
+    search_fields = ('motor_insurance', 'min_year','max_year','min_value','max_value')
+    list_filter   = ('motor_insurance', 'rate')
+
+    def get_cover_type(self, obj):
+        return obj.motor_insurance.cover_type  # Access cover_type directly
+
+    get_cover_type.short_description = "Cover Type"  # Change column title in the admin panel
+
+admin.site.register(RateRange, RateRangesAdmin)
+
+class ExtrachargesAdmin(admin.ModelAdmin):
+    list_display  = ('motor_insurance', 'limit_of_liability', 'rate', 'min_price', 'description', 'created_at', 'updated_at')
+    search_fields = ('motor_insurance', 'limit_of_liability')
+    list_filter   = ('limit_of_liability', 'updated_at')
+
+admin.site.register(ExcessCharges, ExtrachargesAdmin)
 
 class PolicyAdmin(admin.ModelAdmin):
     list_display  = ('applicant', 'insurance', 'start_date', 'end_date', 'duration', 'created_at', 'updated_at')
