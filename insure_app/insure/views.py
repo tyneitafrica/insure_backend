@@ -11,6 +11,7 @@ from .ussd import *
 import json
 from django.core.signing import Signer, BadSignature
 from .utility import *
+import datetime
 
 # Create your views here.
 # unsign cookie 
@@ -278,13 +279,31 @@ class CreateMotorInsuranceSession(APIView):
         vehicle_value = data.get('vehicle_value')
         cover_start_date = data.get('cover_start_date')
 
+        def calculate_age(yob):
+            if isinstance(yob, str):  # Check if yob is a string
+                yob = datetime.datetime.strptime(yob, "%Y-%m-%d").year  # Convert to datetime and extract year
+            
+            current_year = datetime.datetime.now().year
+            age = current_year - yob
+            # print(age)
+            return age
+        
+        def car_age(vehicle_year):
+            if isinstance(vehicle_year, str):  # Check if yob is a string
+                vehicle_year = datetime.datetime.strptime(vehicle_year, "%Y-%m-%d").year  # Convert to datetime and extract year
+
+            current_year = datetime.datetime.now().year
+            car_age = current_year - vehicle_year
+            print(car_age)
+            return car_age
+        
         try:
             # Correctly construct the dictionary
             user_details = {
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
-                "yob": yob,
+                "age": calculate_age(yob) ,
                 "id_no": id_no,
                 "occupation": occupation,
                 "gender": gender,
@@ -293,6 +312,7 @@ class CreateMotorInsuranceSession(APIView):
                 "vehicle_make": vehicle_make,
                 "vehicle_model": vehicle_model,
                 "vehicle_year": vehicle_year,
+                "vehicle_age": car_age(vehicle_year),
                 "vehicle_registration_number": vehicle_registration_number,
                 "cover_type": cover_type,
                 "evaluated": evaluated,
@@ -305,7 +325,8 @@ class CreateMotorInsuranceSession(APIView):
             sign = Signer()
             signed_data = sign.sign(user_details_json)
             # Create the response and set the cookie
-            response = Response({"message": "Motor Insurance session created successfully"}, status=status.HTTP_201_CREATED)
+            response = Response({"message": "Motor Insurance session created successfully",
+                                 }, status=status.HTTP_201_CREATED)
             response.set_cookie(
                 key="user_motor_details",
                 value=signed_data,
@@ -704,25 +725,31 @@ class FilterMotorInsurance(APIView):
             user_details = json.loads(user_details_json)
             
             # Extract filter parameters from the cookie
-            vehicle_category = user_details.get('vehicle_category')
+            vehicle_type = user_details.get('vehicle_type')
             cover_type = user_details.get('cover_type')
-            vehicle_value = user_details.get('vehicle_value')  # New: Get vehicle value from session
+            vehicle_value = user_details.get('vehicle_value')
+            has_anti_theft = user_details.get('has_anti_theft', False)
+            is_young_driver = user_details.get('is_young_driver', False)
+            is_inexperienced_driver = user_details.get('is_inexperienced_driver', False)
             insurance_type = "Motor"  # We're filtering for motor insurance
-            print(vehicle_value)
+
+            print(vehicle_type)
             print(cover_type)
-            print(vehicle_category)
+            print(vehicle_value)
+            print(has_anti_theft)
+            
             # Step 1: Query the Insurance model for the relevant policies
             insurance_queryset = Insurance.objects.filter(type=insurance_type)
             
             if not insurance_queryset.exists():
-                return Response({'message': 'No Motor insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
             
             # Step 2: Query the MotorInsurance model for the specific details
             motor_queryset = MotorInsurance.objects.filter(insurance__in=insurance_queryset)
-            
             # Apply additional filters
-            if vehicle_category:
-                motor_queryset = motor_queryset.filter(vehicle_type=vehicle_category)
+            if vehicle_type:
+                motor_queryset = motor_queryset.filter(vehicle_type=vehicle_type)
+                print(motor_queryset)
             if cover_type:
                 motor_queryset = motor_queryset.filter(cover_type=cover_type)
             
@@ -732,13 +759,12 @@ class FilterMotorInsurance(APIView):
             # Step 3: Calculate premiums and serialize the results
             policies_data = []
             for motor_policy in motor_queryset:
-                if motor_policy.cover_type == "Comprehensive":
-                    # Calculate premium dynamically for comprehensive cover
-                    premium = motor_policy.calculate_premium(vehicle_value)
-                    print(premium)
-                else:
-                    # Use fixed price for other cover types
-                    premium = motor_policy.price
+                premium = motor_policy.calculate_premium(
+                    vehicle_value=vehicle_value,
+                    has_anti_theft=has_anti_theft,
+                    is_young_driver=is_young_driver,
+                    is_inexperienced_driver=is_inexperienced_driver,
+                )
                 
                 policies_data.append({
                     'id': motor_policy.id,

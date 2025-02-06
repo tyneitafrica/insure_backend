@@ -8,6 +8,10 @@ from .utility import generate_otp
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from decimal import Decimal
+from datetime import date
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.exceptions import ValidationError
 
 
 # Custom User Model
@@ -113,9 +117,10 @@ class Insurance(models.Model):
         ("Marine", "Marine"),
         ("Professional Indemnity", "Professional Indemnity"),
     ]
+    
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='insurances')
     company_name= models.CharField(max_length=200, null=True, blank=True)
-    insurance_image = models.ImageField(upload_to='insurance_images/', null=True, blank=True) #will handle profile image of a specific insurance 
+    insurance_image = models.ImageField(upload_to='insurance_images/', null=True, blank=True) #will handle profile image of a insurance company
     type = models.CharField(max_length=50, choices=TYPE_CHOICES)
     title = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
@@ -125,43 +130,111 @@ class Insurance(models.Model):
     def __str__(self):
         return f"{self.title} {self.type} {self.description} {self.organisation}"
 
+
+
 class MotorInsurance(models.Model):
     COVER_TYPE_CHOICES = [
         ("Comprehensive", "Comprehensive"),
-        ("Third Party", "Third Party"),
+        ("Third Party Only", "Third Party Only"),
         ("Third Party Fire and Theft", "Third Party Fire and Theft"),
-        ("Statutory Liability","Statutory Liability")
-    ]
-    VEHICLE_TYPE_CHOICES = [
-        ("Private", "Private"),
-        ("Commercial", "Commercial"),
-        ("PSV", "PSV"),
-        ("Motorcycle", "Motorcycle"),
+        ("Own Goods", "Own Goods"),
+        ("General Cartage", "General Cartage"),
     ]
 
     insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='motor_details')
-    vehicle_type = models.CharField(max_length=100, choices=VEHICLE_TYPE_CHOICES)  # e.g., Saloon, Bus, etc.
-    cover_type = models.CharField(max_length=100, choices=COVER_TYPE_CHOICES)  # e.g., Comprehensive
-    rate = models.DecimalField(max_digits=5, decimal_places=2,null=True,blank=True)  # Rate in percentage (e.g., 4.5 for 4.5%)
-    price = models.DecimalField(max_digits=100, decimal_places=2, null=True, blank=True)  #  used for fixed pricing for the other choices
+    cover_type = models.CharField(max_length=100, choices=COVER_TYPE_CHOICES)
 
     def __str__(self):
-        return f"{self.cover_type} - {self.vehicle_type} - {self.insurance} - {self.rate}"
+        return f"{self.cover_type} - {self.insurance}"
 
-    def calculate_premium(self, vehicle_value):
+    def calculate_premium(self, vehicle_value, vehicle_type, vehicle_year, selected_excesses=[]):
         """
-        Calculate the premium based on the vehicle value and the rate.
+        Calculate the premium based on:
+        - Vehicle Value
+        - Vehicle Type
+        - Cover Type
+        - Vehicle Manufacturing Year (Applies Premium Rules) based on the age of the car 
+        - Selected Excess Charges (Extra Fees)
         """
-        if self.cover_type == "Comprehensive":
-            # Ensure both are of type Decimal
-            rate = Decimal(self.rate) if self.rate is not None else Decimal(0)
-            vehicle_value = Decimal(vehicle_value)  # Ensure vehicle_value is Decimal
-            premium = (rate / Decimal(100)) * vehicle_value
-            return premium
-        else:
-            return self.price if self.price is not None else Decimal(0)  # Ensure self.price is not None
+
+        # Step 1: Fetch the applicable rate range based on year, vehicle type, and value
+        rate_range = self.rate_ranges.filter(
+            vehicle_type=vehicle_type,
+            min_value__lte=vehicle_value,
+            max_value__gte=vehicle_value,
+            min_year__lte=vehicle_year,
+            max_year__gte=vehicle_year
+        ).first()
+
+        if not rate_range:
+            raise ValidationError("No rate range found for the given vehicle value, year, and type.")
+
+        # Step 2: Calculate base premium (percentage of vehicle value)
+        premium = (rate_range.rate / 100) * vehicle_value
+        premium = max(premium, rate_range.min_premium)  # Ensure minimum premium is met
+
+        # Step 3: Apply Excess Charges if selected
+        for excess_id in selected_excesses:
+            excess_charge = self.excess_charges.filter(id=excess_id).first()
+            if excess_charge:
+                premium += excess_charge.min_price  # Adding excess charge to premium
+
+        return round(premium, 2)
 
 
+# the rate ranges for motorInsurance 
+class RateRange(models.Model):  
+    VEHICLE_TYPE_CHOICES = [
+        ("Saloon", "Saloon"),
+        ("SUV", "SUV"),
+        ("Bus", "Bus"),
+        ("Truck", "Truck"),
+        ("Motorcycle", "Motorcycle"),
+        ("Probox", "Probox"),
+        ("Succeed", "Succeed"),
+        ("Wish", "Wish"),
+        ("Vitz", "Vitz"),
+        ("Isis", "Isis"),
+        ("Sienta", "Sienta"),
+        ("School Bus", "School Bus"),
+        ("Commercial Fleet", "Commercial Fleet"),
+    ]
+
+    motor_insurance = models.ForeignKey(MotorInsurance, on_delete=models.CASCADE, related_name='rate_ranges')
+    vehicle_type = models.CharField(max_length=100, choices=VEHICLE_TYPE_CHOICES)
+    min_year = models.PositiveIntegerField(null=True,blank=True)  # Minimum year in range
+    max_year = models.PositiveIntegerField(null=True,blank=True) # maximum year in range
+    min_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Minimum vehicle value for this range
+    max_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Maximum vehicle value for this range
+    rate = models.DecimalField(max_digits=5, decimal_places=2,db_index=True)  # Rate in percentage
+    min_premium = models.DecimalField(max_digits=15, decimal_places=2)  # Minimum premium for this range
+
+    class Meta:
+        unique_together = ("motor_insurance", "min_value", "max_value",'min_year','max_year')  # Prevent duplicate ranges for the same plan
+
+    def __str__(self):
+        return f"{self.motor_insurance} - {self.vehicle_type} - {self.min_year} to {self.max_year} - {self.min_value} to {self.max_value}"
+    
+    def clean(self):
+        if self.max_value <= self.min_value:
+            raise ValidationError("Max value must be greater than min value")
+        if self.min_year >= self.max_year:
+                raise ValidationError("Min year must be less than max year")
+        if self.max_year <= self.min_year:
+            raise ValidationError("Max year must be greater than min year")
+
+# apply extra charges depending on the insurance poliy choosen (will include eg. over 18 , excess protector, pvt)
+class ExcessCharges(models.Model):
+    motor_insurance = models.ForeignKey(MotorInsurance, on_delete=models.CASCADE, related_name='excess_charges')
+    limit_of_liability = models.CharField(max_length=100)
+    rate = models.DecimalField(max_digits=5, decimal_places=2)
+    min_price = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.limit_of_liability} - {self.min_price} - {self.rate}"
 
 # Health Insurance Model
 class HealthInsurance(models.Model):
@@ -176,7 +249,7 @@ class HealthInsurance(models.Model):
     def __str__(self):
         return f"{self.cover_type} - {self.price}"
 
-# Benefit Model
+# Benefit Model will handle the benefits in relation to a speific insurance 
 class Benefit(models.Model):
     insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='benefits')
     limit_of_liability = models.CharField(max_length=100)
@@ -273,11 +346,14 @@ class MotorInsuranceTempData(models.Model):
     email = models.EmailField()
     phone_number = models.CharField(max_length=20)
     id_no = models.CharField(max_length=20)
+    yob = models.DateField()
+    age = models.IntegerField(default=0)
     # motor details
     vehicle_category = models.CharField(max_length=100,choices=[('Private','Private'),('Commercial','Commercial'),('Public Service','Public Service')])
     vehicle_type = models.CharField(max_length=100)
     vehicle_model = models.CharField(max_length=100)
     vehicle_year = models.IntegerField()
+    vehicle_age = models.IntegerField()
     vehicle_value = models.DecimalField(max_digits=100, decimal_places=2)
     cover_start_date = models.DateField()
     is_evaluated = models.BooleanField(default=True)
@@ -292,7 +368,12 @@ class MotorInsuranceTempData(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} - {self.vehicle_registration_number}"   
+        return f"{self.first_name} {self.last_name} - {self.vehicle_registration_number}"  
+
+    def calculate_age(self):
+        today = date.today()
+        age = today.year - self.yob.year - ((today.month, today.day) < (self.yob.month, self.yob.day))
+        return age 
 
 
 # Marine Insurance Temporary Data Model
