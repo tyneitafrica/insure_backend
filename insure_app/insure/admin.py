@@ -54,7 +54,7 @@ class RateRangesAdmin(admin.ModelAdmin):
 admin.site.register(RateRange, RateRangesAdmin)
 
 class ExtrachargesAdmin(admin.ModelAdmin):
-    list_display  = ('motor_insurance', 'limit_of_liability', 'rate', 'min_price', 'description', 'created_at', 'updated_at')
+    list_display  = ('motor_insurance', 'limit_of_liability', 'excess_rate', 'min_price', 'description', 'created_at', 'updated_at')
     search_fields = ('motor_insurance', 'limit_of_liability')
     list_filter   = ('limit_of_liability', 'updated_at')
 
