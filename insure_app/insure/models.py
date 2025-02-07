@@ -201,14 +201,15 @@ class RateRange(models.Model):
     ]
 
     motor_insurance = models.ForeignKey(MotorInsurance, on_delete=models.CASCADE, related_name='rate_ranges')
-    vehicle_type = models.CharField(max_length=100, choices=VEHICLE_TYPE_CHOICES)
+    driving_experience = models.PositiveIntegerField(null=True, blank=True) # if the driver has less than 1 years of driving experience we take that price
     min_year = models.PositiveIntegerField(null=True,blank=True)  # Minimum year in range
     max_year = models.PositiveIntegerField(null=True,blank=True) # maximum year in range
     min_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Minimum vehicle value for this range
     max_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Maximum vehicle value for this range
     rate = models.DecimalField(max_digits=5, decimal_places=2,db_index=True)  # Rate in percentage
     min_premium = models.DecimalField(max_digits=15, decimal_places=2)  # Minimum premium for this range
-
+    vehicle_type = models.CharField(max_length=100,choices=VEHICLE_TYPE_CHOICES)
+    
     class Meta:
         unique_together = ("motor_insurance", "min_value", "max_value",'min_year','max_year')  # Prevent duplicate ranges for the same plan
 
@@ -227,7 +228,7 @@ class RateRange(models.Model):
 class ExcessCharges(models.Model):
     motor_insurance = models.ForeignKey(MotorInsurance, on_delete=models.CASCADE, related_name='excess_charges')
     limit_of_liability = models.CharField(max_length=100)
-    rate = models.DecimalField(max_digits=5, decimal_places=2)
+    excess_rate = models.DecimalField(max_digits=5, decimal_places=2)
     min_price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -235,6 +236,15 @@ class ExcessCharges(models.Model):
 
     def __str__(self):
         return f"{self.limit_of_liability} - {self.min_price} - {self.rate}"
+
+class OptionalExcessCharge(models.Model): #to be factored in during calculation of premium 
+    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name="optional_excess_charges")
+    under_21_age_charge = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    under_1_year_experience_charge = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    
+    def __str__(self):
+        return f"{self.insurance.name}"
+
 
 # Health Insurance Model
 class HealthInsurance(models.Model):
