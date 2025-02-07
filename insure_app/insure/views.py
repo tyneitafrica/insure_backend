@@ -12,6 +12,8 @@ import json
 from django.core.signing import Signer, BadSignature
 from .utility import *
 import datetime
+from django.db import transaction
+
 
 # Create your views here.
 # unsign cookie 
@@ -262,7 +264,7 @@ class CreateMotorInsuranceSession(APIView):
         first_name = data.get('first_name')
         last_name = data.get('last_name')
         email = data.get('email')
-        yob = data.get('yob')
+        yob = data.get('yob') #2016-2-13
         occupation = data.get('occupation')
         gender = data.get('gender')
         id_no = data.get('id')
@@ -285,7 +287,7 @@ class CreateMotorInsuranceSession(APIView):
             
             current_year = datetime.datetime.now().year
             age = current_year - yob
-            # print(age)
+            # print(age) 21
             return age
         
         def car_age(vehicle_year):
@@ -627,50 +629,98 @@ class UploadMotorInsurance(APIView):
         except Exception as e:
             return Response({'error': f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# upload step 2 
 class MotorInsuranceDetails(APIView):
-    def post(self,request):
+    def post(self, request):
         data = request.data
-        cover_type = data.get('cover_type')
-        price = data.get("price")
-        vehicle_type = data.get("vehicle_type")
-        rate = data.get("rate")
-        
+        cover_type = data.get('cover_type') #comprehensive 
+
+        # List of rate ranges
+        rate_ranges = data.get("rate_ranges", [])  # Expecting a list of dictionaries
+        excess_charges = data.get("excess_charges", [])  # Expecting a list of dictionaries
+
         try:
             get_insurance_id = request.COOKIES.get('motor_insurance')
             if not get_insurance_id:
                 return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # query insurance
             insurance = Insurance.objects.get(id=get_insurance_id)
 
+            with transaction.atomic():
+                # Create motor insurance
+                upload = MotorInsurance.objects.create(
+                    insurance=insurance,
+                    cover_type=cover_type,
+                )
 
-            upload = MotorInsurance.objects.create(
-                insurance=insurance,
-                cover_type=cover_type,
-                price=price,
-                vehicle_type=vehicle_type,
-                rate = rate
-            )
+                # Create rate ranges
+                for rate_data in rate_ranges:
+                    RateRange.objects.create(
+                        motor_insurance=upload,
+                        min_value=rate_data.get("min_value"), #2m
+                        max_value=rate_data.get("max_value"), #4m
+                        min_year=rate_data.get("min_year"), #below 5 yrs
+                        max_year=rate_data.get("max_year"), #below 16 yrs
+                        min_premium=rate_data.get("min_premium"),
+                        vehicle_type=rate_data.get("vehicle_type"), #saloon ,bus ,
+                        rate=rate_data.get("rate"), #2.5
+                    )
 
-            response = Response({
-                'message': 'Insurance created successfully',
-                'data': {
-                    'id': upload.id,
-                    'cover_type': upload.cover_type,
-                    'price': upload.price,
-                    'rate':rate
-                }
-            }, status=status.HTTP_201_CREATED)
+                # Create excess charges
+                for excess_data in excess_charges:
+                    ExcessCharges.objects.create(
+                        motor_insurance=upload,
+                        limit_of_liability=excess_data.get("limit_of_liability"), #breakdown , 
+                        excess_rate=excess_data.get("excess_rate"),
+                        min_price=excess_data.get("min_price"), #1000
+                        description=excess_data.get("description"),
+                    )
 
-            return response
-        
+            # Return the created data
+            response_data = MotorInsuranceSerializer(upload).data
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
         except Insurance.DoesNotExist:
             return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
+        
 # step3
+# additional charges where applicable
+class Additionalcharge(APIView):
+    def post (self,request):
+        data = request.data
+        is_under_21 = data.get('is_under_21')
+        is_unexperienced = data.get('is_unexperienced')
+        try:
+            get_insurance_id = request.COOKIES.get('motor_insurance')
+            
+            if not get_insurance_id:
+                return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            insurance = Insurance.objects.get(id=get_insurance_id)
+
+
+            new_charge = OptionalExcessCharge.objects.create(
+                insurance = insurance,
+                under_21_age_charge=is_under_21,
+                under_1_year_experience_charge=is_unexperienced
+            )
+
+            serializer = AdditionalChargesSerializer(new_charge)
+
+            return Response({
+                "message":"Additional charge created successfully",
+                "data":serializer.data
+            }, status=status.HTTP_201_CREATED)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            
+
+
+ 
+
+# step4
 class MotorInsuranceBenefits(APIView):
     def post (self,request):
         data = request.data
@@ -725,9 +775,9 @@ class FilterMotorInsurance(APIView):
             user_details = json.loads(user_details_json)
             
             # Extract filter parameters from the cookie
-            vehicle_type = user_details.get('vehicle_type')
-            cover_type = user_details.get('cover_type')
-            vehicle_value = user_details.get('vehicle_value')
+            vehicle_type = user_details.get('vehicle_type') #salooon ,bus 
+            cover_type = user_details.get('cover_type') #comprehensive
+            vehicle_value = user_details.get('vehicle_value') #45
             has_anti_theft = user_details.get('has_anti_theft', False)
             is_young_driver = user_details.get('is_young_driver', False)
             is_inexperienced_driver = user_details.get('is_inexperienced_driver', False)
