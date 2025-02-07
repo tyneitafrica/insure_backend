@@ -687,6 +687,31 @@ class MotorInsuranceDetails(APIView):
 # step3
 # additional charges where applicable
 class Additionalcharge(APIView):
+    
+    def get(self,request):
+        try:
+            get_insurance_id = request.COOKIES.get('motor_insurance')
+            if not get_insurance_id:
+                return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            insurance = Insurance.objects.get(id=get_insurance_id)
+
+            # Retrieve additional charges for the insurance
+            additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance)
+
+            # Serialize the additional charges
+            serializer = AdditionalChargesSerializer(additional_charges, many=True)
+
+            return Response({
+                "message": "Additional charges retrieved successfully",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except Insurance.DoesNotExist:
+            return Response({'error': 'Insurance not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     def post (self,request):
         data = request.data
         is_under_21 = data.get('is_under_21')
