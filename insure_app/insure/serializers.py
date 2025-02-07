@@ -51,13 +51,30 @@ class InsuranceSerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'updated_at')
 
 
+
+class RateRangeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RateRange
+        fields = '__all__'
+
+class ExcessChargesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExcessCharges
+        fields = '__all__'
+
 class MotorInsuranceSerializer(serializers.ModelSerializer):
+    rate_ranges = RateRangeSerializer(many=True,read_only=True)
+    excess_charges = ExcessChargesSerializer(many=True,read_only=True)
+
     class Meta:
         model = MotorInsurance
-        fields = [
-            'id', 'organisation', 'title', 'price', 'rate', 'vehicle_type', 'vehicle_make', 'vehicle_model', 'vehicle_year',
-            'cover_start_date', 'vehicle_registration_number', 'cover_type', 'evaluated', 'vehicle_value', 'created_at', 'updated_at'
-        ]
+        fields = ['id', 'insurance', 'cover_type', 'rate_ranges', 'excess_charges']
+
+class AdditionalChargesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OptionalExcessCharge
+        fields = '__all__'
+
 
 
 class HealthInsuranceSerializer(serializers.ModelSerializer):
@@ -140,14 +157,7 @@ class BenefitSerializer(serializers.ModelSerializer):
         model = Benefit
         fields = ['id', 'limit_of_liability', 'rate', 'price', 'description']
 
-class MotorInsuranceSerializer(serializers.ModelSerializer):
-    insurance = InsuranceSerializer(read_only=True)
-    benefits = BenefitSerializer(source='insurance.benefits', many=True, read_only=True)  # Fix here
 
-    class Meta:
-        model = MotorInsurance
-        fields = ['id', 'insurance', 'vehicle_type', 'cover_type', 'price', 'benefits']
-        read_only_fields = ('created_at', 'updated_at')
 
 
 class MarineInsuranceSerializer(serializers.ModelSerializer):
