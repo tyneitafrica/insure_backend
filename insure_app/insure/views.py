@@ -271,17 +271,17 @@ class CreateMotorInsuranceSession(APIView):
         phoneNumber = data.get('phoneNumber')
         
         # Vehicle information
-        vehicle_type = data.get('vehicle_type')
-        vehicle_make = data.get('vehicle_make')
-        vehicle_model = data.get('vehicle_model')
-        vehicle_year = data.get('vehicle_year')
+        vehicle_type = data.get('vehicle_type') #saloon,bus,commercial etc...
+        vehicle_make = data.get('vehicle_make') # hachback et
+        vehicle_model = data.get('vehicle_model') # probox,n-series,f-series
+        vehicle_year = data.get('vehicle_year') # 2017,2016 
         vehicle_registration_number = data.get('vehicle_registration_number')
-        cover_type = data.get('cover_type')
-        evaluated = data.get('evaluated')
-        vehicle_value = data.get('vehicle_value')
+        cover_type = data.get('cover_type') #comprehesive,thirdparty ,thirdparty and fire
+        vehicle_value = data.get('vehicle_value') #according to the recent evaluation 
         cover_start_date = data.get('cover_start_date')
+        experience = data.get('experience')
 
-        def calculate_age(yob):
+        def calculate_user_age(yob):
             if isinstance(yob, str):  # Check if yob is a string
                 yob = datetime.datetime.strptime(yob, "%Y-%m-%d").year  # Convert to datetime and extract year
             
@@ -296,7 +296,7 @@ class CreateMotorInsuranceSession(APIView):
 
             current_year = datetime.datetime.now().year
             car_age = current_year - vehicle_year
-            print(car_age)
+            # print(car_age)
             return car_age
         
         try:
@@ -305,7 +305,7 @@ class CreateMotorInsuranceSession(APIView):
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
-                "age": calculate_age(yob) ,
+                "age": calculate_user_age(yob) ,
                 "id_no": id_no,
                 "occupation": occupation,
                 "gender": gender,
@@ -317,9 +317,9 @@ class CreateMotorInsuranceSession(APIView):
                 "vehicle_age": car_age(vehicle_year),
                 "vehicle_registration_number": vehicle_registration_number,
                 "cover_type": cover_type,
-                "evaluated": evaluated,
                 "vehicle_value": vehicle_value,
                 "cover_start_date": cover_start_date,
+                "experience": experience
             }
             
             # Serialize the dictionary to JSON
@@ -788,78 +788,91 @@ class MotorInsuranceBenefits(APIView):
 
 class FilterMotorInsurance(APIView):
     def get(self, request):
-        try:
-            # Retrieve and decode the cookie
-            signed_data = request.COOKIES.get('user_motor_details')
-            if not signed_data:
-                return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Unsigned and deserialize the cookie data
-            sign = Signer()
-            user_details_json = sign.unsign(signed_data)
-            user_details = json.loads(user_details_json)
-            
-            # Extract filter parameters from the cookie
-            vehicle_type = user_details.get('vehicle_type') #salooon ,bus 
-            cover_type = user_details.get('cover_type') #comprehensive
-            vehicle_value = user_details.get('vehicle_value') #45
-            has_anti_theft = user_details.get('has_anti_theft', False)
-            is_young_driver = user_details.get('is_young_driver', False)
-            is_inexperienced_driver = user_details.get('is_inexperienced_driver', False)
-            insurance_type = "Motor"  # We're filtering for motor insurance
-
-            print(vehicle_type)
-            print(cover_type)
-            print(vehicle_value)
-            print(has_anti_theft)
-            
-            # Step 1: Query the Insurance model for the relevant policies
-            insurance_queryset = Insurance.objects.filter(type=insurance_type)
-            
-            if not insurance_queryset.exists():
-                return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
-            
-            # Step 2: Query the MotorInsurance model for the specific details
-            motor_queryset = MotorInsurance.objects.filter(insurance__in=insurance_queryset)
-            # Apply additional filters
-            if vehicle_type:
-                motor_queryset = motor_queryset.filter(vehicle_type=vehicle_type)
-                print(motor_queryset)
-            if cover_type:
-                motor_queryset = motor_queryset.filter(cover_type=cover_type)
-            
-            if not motor_queryset.exists():
-                return Response({'message': 'No motor insurance policies match the given filters'}, status=status.HTTP_404_NOT_FOUND)
-            
-            # Step 3: Calculate premiums and serialize the results
-            policies_data = []
-            for motor_policy in motor_queryset:
-                premium = motor_policy.calculate_premium(
-                    vehicle_value=vehicle_value,
-                    has_anti_theft=has_anti_theft,
-                    is_young_driver=is_young_driver,
-                    is_inexperienced_driver=is_inexperienced_driver,
-                )
-                
-                policies_data.append({
-                    'id': motor_policy.id,
-                    'vehicle_type': motor_policy.vehicle_type,
-                    'cover_type': motor_policy.cover_type,
-                    'rate': motor_policy.rate,  # Include rate in response
-                    'premium': premium,  # Include calculated premium
-                    'insurance_title': motor_policy.insurance.title,
-                    'organisation_name': motor_policy.insurance.organisation.company_name,
-                })
-            
-            # Return the filtered results
-            return Response({
-                'message': 'Filtered motor insurance policies retrieved successfully',
-                'data': policies_data
-            }, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        # Retrieve and decode the cookie
+        signed_data = request.COOKIES.get('user_motor_details')  # Retrieves the user data previously stored in the cookie
+        if not signed_data:
+            return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
         
+        # Unsigned and deserialize the cookie data
+        sign = Signer()
+        user_details_json = sign.unsign(signed_data)
+        user_details = json.loads(user_details_json)
+        
+        # Extract filter parameters from the cookie
+        vehicle_type = user_details.get('vehicle_type')  # e.g., saloon, bus
+        vehicle_model = user_details.get('vehicle_model')  # e.g., Probox, Sienta
+        cover_type = user_details.get('cover_type')  # e.g., comprehensive
+        vehicle_value = user_details.get('vehicle_value')  # e.g., 4.5m
+        vehicle_age = user_details.get('vehicle_age')  # e.g., 3 years
+        age = user_details.get('age')  # e.g., 25 years
+        insurance_type = "Motor"  # We're filtering for motor insurance
+        experience = user_details.get('experience')
+
+        print(vehicle_value)
+        print(vehicle_type)
+        print(age)
+        print(cover_type)
+
+        # Step 1: Query the Insurance model for the relevant policies
+        insurance_queryset = Insurance.objects.filter(type=insurance_type)
+        
+        if not insurance_queryset.exists():
+            return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Step 2: Query the MotorInsurance model for the specific details
+        motor_insurances = MotorInsurance.objects.filter(insurance__in=insurance_queryset, cover_type=cover_type)
+        # print(motor_insurances)
+        
+        # Step 3: Filter and calculate premiums
+        filtered_insurances_with_premiums = []
+        for insurance in motor_insurances:
+            rate_ranges = RateRange.objects.filter(motor_insurance=insurance)
+            for rate_range in rate_ranges:
+                if (rate_range.min_value <= vehicle_value <= rate_range.max_value and
+                    rate_range.vehicle_type == vehicle_type):
+                    # rate_range.min_year <= vehicle_age <= rate_range.max_year):
+                    
+                    # Calculate base premium
+                    base_premium = vehicle_value * (rate_range.rate / 100)
+                    
+                    # Retrieve additional charges
+                    additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance)
+                    under_21_charge = 0
+                    under_1_year_charge = 0
+
+                    for charge in additional_charges:
+                        if age < 21:
+                            under_21_charge = charge.under_21_age_charge
+                        if experience < 1:  # Assuming this is driver experience
+                            under_1_year_charge = charge.under_1_year_experience_charge
+
+                    # Calculate total premium
+                    total_premium = base_premium + under_21_charge + under_1_year_charge
+
+                    # Append the insurance details with the calculated premium
+                    filtered_insurances_with_premiums.append({
+                        'insurance_id': insurance.id,
+                        'company_name': insurance.insurance.company_name,
+                        'cover_type': insurance.cover_type,
+                        'vehicle_type': rate_range.vehicle_type,
+                        'base_premium': base_premium,
+                        'under_21_charge': under_21_charge,
+                        'under_1_year_charge': under_1_year_charge,
+                        'total_premium': total_premium,
+                    })
+                    break  # Stop checking other rate ranges for this insurance
+
+        if not filtered_insurances_with_premiums:
+            return Response({'message': 'No matching insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'message': 'Filtered motor insurance policies retrieved successfully',
+            'data': filtered_insurances_with_premiums,
+        }, status=status.HTTP_200_OK)
+
+        # except Exception as e:
+        #     return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EditMotorInsurance(APIView):
