@@ -309,10 +309,20 @@ class Policy(models.Model):
 # Payment Model
 class Payment(models.Model):
     policy = models.ForeignKey(Policy, on_delete=models.CASCADE, related_name='payments')
+    invoice_id= models.CharField(max_length=100, unique=True, null=True, blank=True)
+    api_ref_id= models.CharField(max_length=100, unique=True, null=True, blank=True)
+    amount= models.FloatField(max_length=100, null=True, blank=True)
+    pay_method= models.CharField(max_length=250, null=True, blank=True)
+    pay_type= models.CharField(max_length=250, null=True, blank=True)
+    pay_date= models.DateTimeField(default=timezone.now)
+    description= models.TextField(null=True, blank=True)
+    status= models.CharField(max_length=20, default="PENDING")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
     def __str__(self):
-        return f"{self.transaction_id} - {self.amount}"
+        return f"{self.invoice_id} - {self.amount} - {self.pay_method} - {self.pay_date}"
 
 # to hold user data temporary   
 class MotorInsuranceTempData(models.Model):
