@@ -26,6 +26,8 @@ SECRET_KEY = 'django-insecure-9+sp99s#p1#=5wyv)0&po206l8kw=ixjzcq)($%$&_!*ffqn7p
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+API_KEY = config('API_KEY')
+print(API_KEY)
 
 ALLOWED_HOSTS = ['*']
 
@@ -56,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'insure.middleware.ApiKeyMiddleware',
 ]
 
 ROOT_URLCONF = 'insure_app.urls'
@@ -143,14 +146,21 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'kyc_images')
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+AUTH_USER_MODEL = "insure.User"  # register the User table that will act as a connection between the diffrent user
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:5173"
 ]
 
 CORS_ALLOW_HEADERS = [

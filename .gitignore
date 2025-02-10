@@ -4,3 +4,5 @@ staticfiles
 insure_db.sqlite3
 migrations 
 .env
+tests
+env
