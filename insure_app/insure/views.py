@@ -635,6 +635,8 @@ class MotorInsuranceDetails(APIView):
         cover_type = data.get('cover_type') #comprehensive 
 
         # List of rate ranges
+        vehicle_type = data.get("vehicle_type") #either Private
+        risk_type = data.get("risk_type")
         rate_ranges = data.get("rate_ranges", [])  # Expecting a list of dictionaries
         excess_charges = data.get("excess_charges", [])  # Expecting a list of dictionaries
 
@@ -652,29 +654,36 @@ class MotorInsuranceDetails(APIView):
                     cover_type=cover_type,
                 )
 
+                # Get or create VehicleType and RiskType
+                vehicle_type_obj, _ = VehicleType.objects.get_or_create(vehicle_category=vehicle_type)
+                risk_type_obj, _ = RiskType.objects.get_or_create(vehicle_type=vehicle_type_obj, risk_name=risk_type)
+
                 # Create rate ranges
                 for rate_data in rate_ranges:
                     RateRange.objects.create(
                         motor_insurance=upload,
-                        min_value=rate_data.get("min_value"), #2m
-                        max_value=rate_data.get("max_value"), #4m
-                        min_year=rate_data.get("min_year"), #below 5 yrs
-                        max_year=rate_data.get("max_year"), #below 16 yrs
-                        min_premium=rate_data.get("min_premium"),
-                        vehicle_type=rate_data.get("vehicle_type"), #saloon ,bus ,
-                        rate=rate_data.get("rate"), #2.5
+                        risk_type=risk_type_obj,
+                        min_value=rate_data.get("min_value"),  # e.g., 2,000,000
+                        max_value=rate_data.get("max_value"),  # e.g., 4,000,000
+                        max_age=rate_data.get("max_age", 5),  # e.g., below 5 years
+                        min_sum_assured=rate_data.get("min_premium"),  # e.g., 40,000
+                        usage_category=rate_data.get("usage_category"),  # e.g., Fleet, Standard
+                        weight_category=rate_data.get("weight_category"),  # e.g., Up to 3 tons
+                        rate=rate_data.get("rate"),  # e.g., 4.0
                     )
+
+                    print(risk_type_obj)
 
                 # Create excess charges
                 for excess_data in excess_charges:
                     ExcessCharges.objects.create(
                         motor_insurance=upload,
-                        limit_of_liability=excess_data.get("limit_of_liability"), #breakdown , 
-                        excess_rate=excess_data.get("excess_rate"),
-                        min_price=excess_data.get("min_price"), #1000
-                        description=excess_data.get("description"),
+                        limit_of_liability=excess_data.get("limit_of_liability"),  # e.g., Excess Protector Charge
+                        excess_rate=excess_data.get("excess_rate"),  # e.g., 0.25
+                        min_price=excess_data.get("min_price"),  # e.g., 5,000
+                        description=excess_data.get("description"),  # e.g., "Excess Protector Charge"
                     )
-
+    
             # Return the created data
             response_data = MotorInsuranceSerializer(upload).data
             return Response(response_data, status=status.HTTP_201_CREATED)
