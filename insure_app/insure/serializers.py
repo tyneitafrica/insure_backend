@@ -50,12 +50,27 @@ class InsuranceSerializer(serializers.ModelSerializer):
         fields = ['id', 'organisation', 'company_name','insurance_image','title', 'type', 'description']
         read_only_fields = ('created_at', 'updated_at')
 
+class VehicleTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VehicleType
+        fields = '__all__'
 
+class RiskTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RiskType
+        fields = '__all__'
 
 class RateRangeSerializer(serializers.ModelSerializer):
+    vehicle_type = serializers.SerializerMethodField()  # Custom method to get vehicle type
+    risk_type = RiskTypeSerializer(read_only=True)  # Nested RiskType serializer
+
     class Meta:
         model = RateRange
         fields = '__all__'
+
+    def get_vehicle_type(self, obj):
+        # Get the vehicle type from the related RiskType
+        return obj.risk_type.vehicle_type.vehicle_category
 
 class ExcessChargesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -63,12 +78,13 @@ class ExcessChargesSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class MotorInsuranceSerializer(serializers.ModelSerializer):
-    rate_ranges = RateRangeSerializer(many=True,read_only=True)
-    excess_charges = ExcessChargesSerializer(many=True,read_only=True)
+    rate_ranges = RateRangeSerializer(many=True, read_only=True)  # Nested RateRange serializer
+    excess_charges = ExcessChargesSerializer(many=True, read_only=True)  # Nested ExcessCharges serializer
 
     class Meta:
         model = MotorInsurance
         fields = ['id', 'insurance', 'cover_type', 'rate_ranges', 'excess_charges']
+    
 
 class AdditionalChargesSerializer(serializers.ModelSerializer):
     class Meta:
