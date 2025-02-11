@@ -41,9 +41,22 @@ class MotorInsuranceAdmin(admin.ModelAdmin):
 
 admin.site.register(MotorInsurance, MotorInsuranceAdmin)
 
+class VehicleTypeAdmin(admin.ModelAdmin):
+    list_display  = ('vehicle_category', 'created_at', 'updated_at')
+    search_fields = ('vehicle_category',)
+    list_filter   = ('created_at', 'updated_at')
+admin.site.register(VehicleType, VehicleTypeAdmin)
+
+class RiskTypeAdmin(admin.ModelAdmin):
+    list_display  = ('vehicle_type', 'risk_name', 'created_at', 'updated_at')
+    search_fields = ('vehicle_type', 'risk_name')
+    list_filter   = ('created_at', 'updated_at')
+
+admin.site.register(RiskType, RiskTypeAdmin)
+
 class RateRangesAdmin(admin.ModelAdmin):
-    list_display  = ('get_cover_type', 'min_year','max_year','min_value','max_value', 'rate','min_premium')
-    search_fields = ('motor_insurance', 'min_year','max_year','min_value','max_value')
+    list_display  = ('get_cover_type', "risk_type",'max_age','min_value','max_value', 'rate','min_sum_assured')
+    search_fields = ('motor_insurance', 'max_age','min_value','max_value')
     list_filter   = ('motor_insurance', 'rate')
 
     def get_cover_type(self, obj):
