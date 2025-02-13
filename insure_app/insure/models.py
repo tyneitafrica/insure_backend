@@ -137,8 +137,6 @@ class MotorInsurance(models.Model):
         ("Comprehensive", "Comprehensive"),
         ("Third Party Only", "Third Party Only"),
         ("Third Party Fire and Theft", "Third Party Fire and Theft"),
-        ("Own Goods", "Own Goods"),
-        ("General Cartage", "General Cartage"),
     ]
 
     insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='motor_details')
@@ -147,47 +145,75 @@ class MotorInsurance(models.Model):
     def __str__(self):
         return f"{self.cover_type} - {self.insurance}"
 
-
-# the rate ranges for motorInsurance 
-class RateRange(models.Model):  
+# represents the diffrent vehicle types we have 
+class VehicleType(models.Model):
     VEHICLE_TYPE_CHOICES = [
-        ("Saloon", "Saloon"),
-        ("SUV", "SUV"),
-        ("Bus", "Bus"),
-        ("Truck", "Truck"),
-        ("Motorcycle", "Motorcycle"),
-        ("Probox", "Probox"),
-        ("Succeed", "Succeed"),
-        ("Wish", "Wish"),
-        ("Vitz", "Vitz"),
-        ("Isis", "Isis"),
-        ("Sienta", "Sienta"),
-        ("School Bus", "School Bus"),
-        ("Commercial Fleet", "Commercial Fleet"),
+        ("Private", "Private"),
+        ("Commercial", "Commercial"),
+        ("Public_Service", "Public_Service"),
     ]
+    vehicle_category = models.CharField(max_length=100,choices=VEHICLE_TYPE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return f"{self.vehicle_category}"
+
+# each vehicle_type is assocated to a specific risk type 
+class RiskType(models.Model):
+    RISK_TYPE_CATEGORIES = [
+        ("Motor_Private","Motor_Private"), #specific to private vehicles
+        ("General_Cortage","General_Cortage"), # specifc to commercial vehicles
+        ("Institutional_Vehicles","Institutional_Vehicles"),
+        ("Online_Taxis","Online_Taxis"),
+        ("Own_Goods","Own_Goods"),
+        ("Chaffer_Driven","Chaffer_Driven"), #specific to public service 
+        ("Chaffer_driven_taxi","Chaffer_driven_taxi"),
+        ("Motor_Psv","Motor_Psv")
+    ]
+    vehicle_type = models.ForeignKey(VehicleType,on_delete=models.CASCADE,related_name="risk_type")
+    risk_name = models.CharField(max_length=100,choices=RISK_TYPE_CATEGORIES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.vehicle_type} {self.risk_name}"
+
+# the rate ranges is associated to a specific risk type and motro insurance cover
+class RateRange(models.Model):  
     motor_insurance = models.ForeignKey(MotorInsurance, on_delete=models.CASCADE, related_name='rate_ranges')
-    min_year = models.PositiveIntegerField(null=True,blank=True)  # Minimum year in range
-    max_year = models.PositiveIntegerField(null=True,blank=True) # maximum year in range
+    risk_type = models.ForeignKey(RiskType,on_delete=models.CASCADE) #to add related name later 
+    usage_category = models.CharField(max_length=50, null=True,blank=True, choices=[
+        ('Fleet', 'Fleet'),
+        ('Standard', 'Standard'),
+    ])
+    weight_category = models.CharField(max_length=50,null=True,blank=True,choices=[
+        ('Up to 3 tons', 'Up to 3 tons'),
+        ('3 tons – 8 tons', '3 tons – 8 tons'),
+        ('Over 8 tons', 'Over 8 tons'),
+        ('8 tons-20 tons', '8 tons- 20 tons'),
+        ('20 tons -30 tons', '20 tons -30 tons'),
+        ('Prime mover', 'Prime mover'),
+    ])
+    max_car_age = models.IntegerField()  # Maximum age threshold (e.g., 5 years)
     min_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Minimum vehicle value for this range
     max_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Maximum vehicle value for this range
     rate = models.DecimalField(max_digits=5, decimal_places=2,db_index=True)  # Rate in percentage
-    min_premium = models.DecimalField(max_digits=15, decimal_places=2)  # Minimum premium for this range
-    vehicle_type = models.CharField(max_length=100,choices=VEHICLE_TYPE_CHOICES)
+    min_sum_assured = models.DecimalField(max_digits=15, decimal_places=2)  # Minimum premium for this range
     
     # class Meta:
     #     unique_together = ("motor_insurance", "min_value", "max_value",'min_year','max_year')  # Prevent duplicate ranges for the same plan
 
     def __str__(self):
-        return f"{self.motor_insurance} - {self.vehicle_type} - {self.min_year} to {self.max_year} - {self.min_value} to {self.max_value}"
+        return f"{self.motor_insurance} - {self.risk_type} {self.max_car_age} - {self.min_value} to {self.max_value}"
     
     def clean(self):
         if self.max_value <= self.min_value:
             raise ValidationError("Max value must be greater than min value")
-        if self.min_year >= self.max_year:
-                raise ValidationError("Min year must be less than max year")
-        if self.max_year <= self.min_year:
-            raise ValidationError("Max year must be greater than min year")
+        # if self.min_year >= self.max_year:
+        #         raise ValidationError("Min year must be less than max year")
+        # if self.max_year <= self.min_year:
+        #     raise ValidationError("Max year must be greater than min year")
 
 # apply extra charges depending on the insurance poliy choosen (will include eg.excess protector, pvt)
 class ExcessCharges(models.Model):
@@ -200,7 +226,7 @@ class ExcessCharges(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.limit_of_liability} - {self.min_price} - {self.rate}"
+        return f"{self.limit_of_liability} - {self.min_price} - {self.excess_rate}"
 
 class OptionalExcessCharge(models.Model): #to be factored in during calculation of premium 
     insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name="optional_excess_charges")
@@ -208,7 +234,7 @@ class OptionalExcessCharge(models.Model): #to be factored in during calculation 
     under_1_year_experience_charge = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     
     def __str__(self):
-        return f"{self.insurance}"
+        return f"{self.insurance} {self.under_1_year_experience_charge} {self.under_21_age_charge}"
 
 
 # Health Insurance Model
