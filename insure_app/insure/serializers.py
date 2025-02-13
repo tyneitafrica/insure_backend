@@ -196,3 +196,12 @@ class MarineInsuranceSerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'updated_at')
 
 
+class PaymentSerializer(serializers.ModelSerializer):
+    policy= PolicySerializer(read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ['id', 'policy','invoice_id','api_ref_id','amount','phone_number','pay_date','pay_method','pay_type','created_at', 'updated_at']
+        read_only_fields = ('created_at', 'updated_at')
+
+

@@ -7,6 +7,7 @@ import string
 # from decouple import config
 # from rest_framework.response import Response
 # from rest_framework import status
+import uuid
 
 # import uuid
 def generate_otp():
@@ -27,7 +28,10 @@ def get_user_from_cookie(cookie):
     except BadSignature:
         raise AuthenticationFailed('Invalid cookie signature')
     
-
+def create_random_digit():
+    res = ''.join(random.choices(string.ascii_uppercase+
+                             string.digits, k=7))
+    return res
 
 
 
