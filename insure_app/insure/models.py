@@ -191,11 +191,11 @@ class RateRange(models.Model):
         ('Up to 3 tons', 'Up to 3 tons'),
         ('3 tons – 8 tons', '3 tons – 8 tons'),
         ('Over 8 tons', 'Over 8 tons'),
-        ('8 tons- 20 tons', '8 tons- 20 tons'),
+        ('8 tons-20 tons', '8 tons- 20 tons'),
         ('20 tons -30 tons', '20 tons -30 tons'),
         ('Prime mover', 'Prime mover'),
     ])
-    max_age = models.IntegerField()  # Maximum age threshold (e.g., 5 years)
+    max_car_age = models.IntegerField()  # Maximum age threshold (e.g., 5 years)
     min_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Minimum vehicle value for this range
     max_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Maximum vehicle value for this range
     rate = models.DecimalField(max_digits=5, decimal_places=2,db_index=True)  # Rate in percentage
@@ -205,15 +205,15 @@ class RateRange(models.Model):
     #     unique_together = ("motor_insurance", "min_value", "max_value",'min_year','max_year')  # Prevent duplicate ranges for the same plan
 
     def __str__(self):
-        return f"{self.motor_insurance} - {self.risk_type} - {self.min_year} to {self.max_year} - {self.min_value} to {self.max_value}"
+        return f"{self.motor_insurance} - {self.risk_type} {self.max_car_age} - {self.min_value} to {self.max_value}"
     
     def clean(self):
         if self.max_value <= self.min_value:
             raise ValidationError("Max value must be greater than min value")
-        if self.min_year >= self.max_year:
-                raise ValidationError("Min year must be less than max year")
-        if self.max_year <= self.min_year:
-            raise ValidationError("Max year must be greater than min year")
+        # if self.min_year >= self.max_year:
+        #         raise ValidationError("Min year must be less than max year")
+        # if self.max_year <= self.min_year:
+        #     raise ValidationError("Max year must be greater than min year")
 
 # apply extra charges depending on the insurance poliy choosen (will include eg.excess protector, pvt)
 class ExcessCharges(models.Model):
@@ -234,7 +234,7 @@ class OptionalExcessCharge(models.Model): #to be factored in during calculation 
     under_1_year_experience_charge = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     
     def __str__(self):
-        return f"{self.insurance}"
+        return f"{self.insurance} {self.under_1_year_experience_charge} {self.under_21_age_charge}"
 
 
 # Health Insurance Model

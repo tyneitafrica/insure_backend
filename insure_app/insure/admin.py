@@ -55,7 +55,7 @@ class RiskTypeAdmin(admin.ModelAdmin):
 admin.site.register(RiskType, RiskTypeAdmin)
 
 class RateRangesAdmin(admin.ModelAdmin):
-    list_display  = ('get_cover_type', "risk_type",'max_age','min_value','max_value', 'rate','min_sum_assured')
+    list_display  = ('get_cover_type', "risk_type",'max_car_age','min_value','max_value', 'rate','min_sum_assured')
     search_fields = ('motor_insurance', 'max_age','min_value','max_value')
     list_filter   = ('motor_insurance', 'rate')
 
