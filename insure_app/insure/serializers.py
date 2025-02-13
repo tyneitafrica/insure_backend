@@ -53,12 +53,16 @@ class InsuranceSerializer(serializers.ModelSerializer):
 class VehicleTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleType
-        fields = '__all__'
+        fields = ['id','vehicle_category']
+        read_only_fields = ('created_at', 'updated_at')
+
 
 class RiskTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = RiskType
-        fields = '__all__'
+        fields = ['id','vehicle_type','risk_name']
+        read_only_fields = ('created_at', 'updated_at')
+
 
 class RateRangeSerializer(serializers.ModelSerializer):
     vehicle_type = serializers.SerializerMethodField()  # Custom method to get vehicle type
@@ -66,7 +70,9 @@ class RateRangeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RateRange
-        fields = '__all__'
+        fields = ['id','motor_insurance','vehicle_type','risk_type','usage_category','weight_category','max_car_age','min_value','max_value','rate','min_sum_assured']
+        read_only_fields = ('created_at', 'updated_at')
+
 
     def get_vehicle_type(self, obj):
         # Get the vehicle type from the related RiskType
@@ -75,7 +81,8 @@ class RateRangeSerializer(serializers.ModelSerializer):
 class ExcessChargesSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExcessCharges
-        fields = '__all__'
+        fields = ['motor_insurance','limit_of_liability','excess_rate','min_price','description']
+        read_only_fields = ('created_at', 'updated_at')
 
 class MotorInsuranceSerializer(serializers.ModelSerializer):
     rate_ranges = RateRangeSerializer(many=True, read_only=True)  # Nested RateRange serializer
@@ -84,12 +91,15 @@ class MotorInsuranceSerializer(serializers.ModelSerializer):
     class Meta:
         model = MotorInsurance
         fields = ['id', 'insurance', 'cover_type', 'rate_ranges', 'excess_charges']
+        read_only_fields = ('created_at', 'updated_at')
     
 
 class AdditionalChargesSerializer(serializers.ModelSerializer):
     class Meta:
         model = OptionalExcessCharge
         fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
 
 
 
