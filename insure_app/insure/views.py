@@ -13,6 +13,7 @@ from django.core.signing import Signer, BadSignature
 from .utility import *
 import datetime
 from django.db import transaction
+import requests
 
 
 # Create your views here.
@@ -23,9 +24,14 @@ import jwt
 from django.core.signing import Signer, BadSignature
 from decouple import config
 from .models import User, Organisation
+from intasend import APIService
 
 # Load secret key from environment variables
 SECRET_KEY = config("SECRET")
+
+token = config('INTA_SEND_API_KEY')
+publishable_key = config('INTA_SEND_PUBLISHABLE_KEY')
+service = APIService(token=token, publishable_key=publishable_key, test=True)
 
 def get_user_from_token(request):
     token = request.COOKIES.get('jwt')
@@ -179,8 +185,8 @@ class SignupOrganisation(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
-        companyName= request.data.get('companyName')
-        phoneNumber= request.data.get('phoneNumber')
+        companyName= request.data.get('company_name')
+        phoneNumber= request.data.get('phone_number')
         role = User.Role.ORGANISATION
 
         # check if the user is already registered
@@ -1596,3 +1602,266 @@ class ApplicantkycUpload(APIView):
             return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# Get all payment from the db-----------------------------------------------------------------------------------
+class PaymentView(APIView):
+    def get(self, request):
+        try:
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Retrieve the applicant associated with the user
+            applicant = get_applicant_from_user(user)
+            if not applicant:
+                return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Retrieve all payments associated with the applicant
+            payments = Payment.objects.filter(policy__applicant=applicant)
+
+            # Serialize the payments data
+            serialized_payments = [
+                {
+                    'id': payment.id,
+                    'invoice_id': payment.invoice_id,
+                    'api_ref_id': payment.api_ref_id,
+                    'amount': payment.amount,
+                    'phone_number': payment.phone_number,
+                    'description': payment.description,
+                    'pay_method': payment.pay_method,
+                    'pay_date': payment.pay_date,
+                    'status': payment.status
+                }
+                for payment in payments
+            ]
+
+            return Response({
+                'message': 'Payments retrieved successfully',
+                'data': serialized_payments
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# ----M-PESA payment----------------------------------------------------------------------------------
+class MpesaPaymentView(APIView):
+    def post(self, request):
+        data = request.data
+        amount = data.get('amount')
+        phone_number = data.get('phone_number') # 2547xxxxxxx format
+        description = data.get('description') # Describe the payment narrative
+
+        # Get the user from the token
+        user = get_user_from_token(request)
+        if not user:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.role != user.Role.APPLICANT:
+            return Response({'error': 'You are not authorized to access this resource'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Get the applicant from the user
+        applicant = get_applicant_from_user(user)
+        if not applicant:
+            return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get the policy from the applicant
+        policy = self.get_policy_from_applicant(applicant)
+        # print(policy)
+        if not policy:
+            return Response({'error': 'Policy not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not amount:
+            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        res= service.collect.mpesa_stk_push(phone_number=phone_number,email=user.email, amount=amount, narrative=description)
+        # print(res)
+
+        # Create the payment
+        payment = Payment.objects.create(
+            policy=policy,
+            invoice_id=res['invoice']['invoice_id'],
+            api_ref_id=res['invoice']['api_ref'],
+            amount=amount,
+            phone_number=phone_number,
+            pay_method='MPESA',
+            pay_date=timezone.now(),
+            description=description,
+            status=res['invoice']['state']
+        )
+
+        # Return the payment details
+        return Response({
+            'message': 'Payment created successfully',
+            'data': {
+                'id': payment.id,
+                'invoice_id': payment.invoice_id,
+                'api_ref_id': payment.api_ref_id,
+                'amount': payment.amount,
+                'phone_number': payment.phone_number,
+                'description': payment.description,
+                'pay_method': payment.pay_method,
+                'pay_date': payment.pay_date,
+                'status': payment.status
+            }
+        }, status=status.HTTP_201_CREATED)
+
+    def get_policy_from_applicant(self, applicant):
+        existing_policy= Policy.objects.filter(applicant=applicant).first()
+        if not existing_policy:
+            return None        
+        return existing_policy
+
+# Card payment----------------------------------------------------------------------------------
+class CardPaymentView(APIView):
+    def post(self, request):
+        data = request.data
+        amount = data.get('amount')
+        phone_number = data.get('phone_number') #2547xxxxxxx format
+        description = data.get('description')
+        intasend_url= 'https://sandbox.intasend.com/api/v1/checkout/'
+        pay_method= "CARD-PAYMENT"
+        random_val= create_random_digit()
+
+        # Get the user from the token
+        user = get_user_from_token(request)
+        if not user:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get the applicant from the user
+        applicant = get_applicant_from_user(user)
+        if not applicant:
+            return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get the policy from the applicant
+        policy = self.get_policy_from_applicant(applicant)
+        if not policy:
+            return Response({'error': 'Policy not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not amount:
+            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload= {
+            "first_name": user.first_name if user.first_name else "",
+            "last_name": user.last_name if user.last_name else "",
+            "phone_number": phone_number,
+            "email": user.email,
+            "method": "CARD-PAYMENT",
+            "amount": amount,
+            "redirect_url": config('INTA_SEND_CARD_REDIRECT_URL'),
+            "currency": 'KES',
+            "card_tarrif": "CUSTOMER-PAYS",
+            "api_ref": random_val,
+            "narrative": description
+        }
+
+        headers = {
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                    "X-IntaSend-Public-API-Key": publishable_key
+                }
+
+        res = requests.post(intasend_url, json=payload, headers=headers).json()
+        # print(res)
+        if res['id']:
+            payment = Payment.objects.create(
+                policy=policy,
+                api_ref_id=res['api_ref'],
+                amount=amount,
+                phone_number=phone_number,
+                pay_method=pay_method,
+                pay_date=timezone.now(),
+                description=description,
+            )
+            return Response({
+                'message': 'Payment created successfully',
+                'data': {
+                    'id': payment.id,
+                    'invoice_id': payment.invoice_id,
+                    'api_ref_id': payment.api_ref_id,
+                    'amount': payment.amount,
+                    'phone_number': payment.phone_number,
+                    'description': payment.description,
+                    'pay_method': payment.pay_method,
+                    'pay_date': payment.pay_date,
+                    'status': payment.status
+                }
+            }, status=status.HTTP_201_CREATED)
+
+    def get_policy_from_applicant(self, applicant):
+        existing_policy= Policy.objects.filter(applicant=applicant).first()
+        if not existing_policy:
+            return None
+        return existing_policy
+    
+# Payment callback function-------------------------------------------------------------------------
+class PaymentCallbackView(APIView):
+    def post(self, request):
+        """
+        {
+            "invoice_id": "BRZKGPR",
+            "state": "PROCESSING",
+            "provider": "CARD-PAYMENT",
+            "charges": "0.00",
+            "net_amount": "10.36",
+            "currency": "KES",
+            "value": "10.36",
+            "account": "john.doe@gmail.com",
+            "api_ref": "ISL_faa26ef9-eb08-4353-b125-ec6a8f022815",
+            "host": "https://sandbox.intasend.com",
+            "failed_reason": null,
+            "failed_code": null,
+            "failed_code_link": "https://intasend.com/troubleshooting",
+            "created_at": "2021-08-18T12:33:50.425886+03:00",
+            "updated_at": "2021-08-18T12:33:51.304105+03:00",
+            "challenge": "testnet"
+        }
+        """
+
+        # Extract the callback data from the request
+        callback_data = request.data
+        invoice_id = callback_data.get('invoice_id')
+        state = callback_data.get('state')
+        api_ref = callback_data.get('api_ref')
+
+        if not invoice_id:
+            return Response({'error': 'Invoice ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if api_ref == 'API Request':
+            if state == 'COMPLETED':
+                payment= Payment.objects.get(invoice_id=invoice_id)
+                if not payment:
+                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
+                payment.status= state
+                payment.save()
+                return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
+            
+            elif state == 'FAILED':
+                payment= Payment.objects.get(invoice_id=invoice_id)
+                if not payment:
+                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
+                payment.status= state
+                payment.save()
+                return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
+        
+        else:
+            if state == 'COMPLETED':
+                payment= Payment.objects.get(api_ref_id=api_ref)
+                if not payment:
+                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
+                payment.status= state
+                payment.save()
+                return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
+
+            elif state == 'FAILED':
+                payment= Payment.objects.get(api_ref_id=api_ref)
+                if not payment:
+                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
+                payment.status= state
+                payment.save()
+                return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
+
+        # Return a response to acknowledge the callback
+        return Response({'message': 'Callback received successfully'}, status=status.HTTP_200_OK)
+
+            
+
