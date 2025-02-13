@@ -837,7 +837,7 @@ class FilterMotorInsurance(APIView):
             vehicle_category = user_details.get('vehicle_category')
             selected_excess_charge = user_details.get('excess_charge',[])  # List of selected excess charges (e.g., ["PVT"])
 
-            print(selected_excess_charge)
+            # print(selected_excess_charge)
 
             # print("request data:",{
                 # "vehicle_type":vehicle_type,
@@ -895,14 +895,14 @@ class FilterMotorInsurance(APIView):
                         usage_category = user_details.get('usage_category')  # e.g., Fleet, Standard
                         weight_category = user_details.get('weight_category')  # e.g., Up to 3 tons, 3-8 tons
                         
-                        print("vehicle_category", vehicle_category)
-                        print("risk_name",risk_name)
-                        print("usage_category",usage_category)
-                        print("weight_category",weight_category)
+                        # print("vehicle_category", vehicle_category)
+                        # print("risk_name",risk_name)
+                        # print("usage_category",usage_category)
+                        # print("weight_category",weight_category)
 
-                        print("usage_db",rate_range.usage_category)
-                        print("weight_db",rate_range.weight_category)
-                        print("risk_name_db",rate_range.risk_type.risk_name)
+                        # print("usage_db",rate_range.usage_category)
+                        # print("weight_db",rate_range.weight_category)
+                        # print("risk_name_db",rate_range.risk_type.risk_name)
                     
 
                         if (rate_range.usage_category != usage_category or
