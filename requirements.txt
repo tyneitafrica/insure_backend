@@ -21,9 +21,9 @@ exceptiongroup==1.2.2
 Faker==33.1.0
 filelock==3.16.1
 idna==3.10
-intasend-python==1.1.2
 inflection==0.5.1
 iniconfig==2.0.0
+intasend-python==1.1.2
 mypy-extensions==1.0.0
 packaging==24.2
 pathspec==0.12.1
