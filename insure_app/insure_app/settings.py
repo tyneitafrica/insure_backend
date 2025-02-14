@@ -27,7 +27,6 @@ SECRET_KEY = 'django-insecure-9+sp99s#p1#=5wyv)0&po206l8kw=ixjzcq)($%$&_!*ffqn7p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 API_KEY = config('API_KEY')
-print(API_KEY)
 
 ALLOWED_HOSTS = ['*']
 
@@ -160,7 +159,9 @@ AUTH_USER_MODEL = "insure.User"  # register the User table that will act as a co
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "https://sandbox.safaricom.co.ke",
+    "https://api.safaricom.co.ke",
 ]
 
 CORS_ALLOW_HEADERS = [
@@ -175,6 +176,9 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000",  # Replace with your frontend URL
+    "https://sandbox.safaricom.co.ke",
+    "https://api.safaricom.co.ke",
+    
 ]
 
 # CLOUDINARY_STORAGE = {
