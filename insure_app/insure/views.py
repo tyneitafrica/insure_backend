@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 import jwt
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .ussd import *
 import json
 from django.core.signing import Signer, BadSignature
@@ -14,7 +15,9 @@ from .utility import *
 import datetime
 from django.db import transaction
 import requests
-
+from requests.auth import HTTPBasicAuth
+import base64
+from django.http import JsonResponse
 
 # Create your views here.
 # unsign cookie 
@@ -29,9 +32,6 @@ from intasend import APIService
 # Load secret key from environment variables
 SECRET_KEY = config("SECRET")
 
-token = config('INTA_SEND_API_KEY')
-publishable_key = config('INTA_SEND_PUBLISHABLE_KEY')
-service = APIService(token=token, publishable_key=publishable_key, test=True)
 
 def get_user_from_token(request):
     token = request.COOKIES.get('jwt')
@@ -1700,6 +1700,7 @@ class ApplicantkycUpload(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
 # Get all payment from the db-----------------------------------------------------------------------------------
 class PaymentView(APIView):
     def get(self, request):
@@ -1739,10 +1740,9 @@ class PaymentView(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-# ----M-PESA payment----------------------------------------------------------------------------------
+        
 class MpesaPaymentView(APIView):
-    def post(self, request):
+    def post(self,request):
         data = request.data
         amount = data.get('amount')
         phone_number = data.get('phone_number') # 2547xxxxxxx format
@@ -1763,44 +1763,95 @@ class MpesaPaymentView(APIView):
 
         # Get the policy from the applicant
         policy = self.get_policy_from_applicant(applicant)
-        # print(policy)
         if not policy:
             return Response({'error': 'Policy not found'}, status=status.HTTP_404_NOT_FOUND)
         
         if not amount:
             return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # get the access token
+        access_token = self.get_mpesa_token()
+        if not access_token:
+            return {"success": False, "message": "Failed to retrieve M-Pesa access token"}, 500
+        # get the password
+        password = self.get_mpesa_password()
+        # get the timestamp
+        timestamp = self.get_mpesa_timestamp()
+        # get the business short code
+        business_short_code = config('MPESA_SHORT_CODE')
+        transaction_type = "CustomerPayBillOnline"
+        # get the partyA
+        partyA = phone_number
+        # get the partyB
+        partyB = config('MPESA_SHORT_CODE')
+        phone_number = phone_number
+        amount = amount
 
-        res= service.collect.mpesa_stk_push(phone_number=phone_number,email=user.email, amount=amount, narrative=description)
+        invoice_id= create_invoice_id()
+        if Payment.objects.filter(invoice_id=invoice_id).exists():
+            invoice_id=create_invoice_id()
+
+        callback_url = config('MPESA_CALLBACK_URL')
+        # account_reference = self.generate_num_letter_token()
+        transaction_desc = "Payment for Insuarance Service"
+        api_url = config('MPESA_STK_PUSH_URL')
+
+        headers = {"Authorization": "Bearer %s" % access_token}
+
+        request = {
+            "BusinessShortCode": business_short_code,
+            "Password": password,
+            "Timestamp": timestamp,
+            "TransactionType": transaction_type,
+            "Amount": amount,
+            "PartyA": partyA,
+            "PartyB": partyB,
+            "PhoneNumber": phone_number,
+            "CallBackURL": callback_url,
+            "AccountReference": invoice_id,
+            "TransactionDesc": transaction_desc
+        }
+
+        res = requests.post(url= api_url, json=request, headers=headers).json()
+
         # print(res)
 
-        # Create the payment
-        payment = Payment.objects.create(
-            policy=policy,
-            invoice_id=res['invoice']['invoice_id'],
-            api_ref_id=res['invoice']['api_ref'],
-            amount=amount,
-            phone_number=phone_number,
-            pay_method='MPESA',
-            pay_date=timezone.now(),
-            description=description,
-            status=res['invoice']['state']
-        )
-
         # Return the payment details
-        return Response({
-            'message': 'Payment created successfully',
-            'data': {
-                'id': payment.id,
-                'invoice_id': payment.invoice_id,
-                'api_ref_id': payment.api_ref_id,
-                'amount': payment.amount,
-                'phone_number': payment.phone_number,
-                'description': payment.description,
-                'pay_method': payment.pay_method,
-                'pay_date': payment.pay_date,
-                'status': payment.status
-            }
-        }, status=status.HTTP_201_CREATED)
+        if int(res["ResponseCode"])== 0: 
+             # Create the payment
+            payment = Payment.objects.create(
+                policy=policy,
+                invoice_id=invoice_id,
+                api_ref_id=invoice_id,
+                merchant_request_id=res['MerchantRequestID'],
+                checkout_request_id= res['CheckoutRequestID'],
+                amount=amount,
+                phone_number=phone_number,
+                pay_method='MPESA',
+                pay_date=timezone.now(),
+                description=description,
+                result_desc= "Awaiting payment response"
+            )          
+            return Response({
+                'message': 'Payment initiated successfully',        
+                'data': {
+                    'id': payment.id,
+                    'invoice_id': payment.invoice_id,
+                    'merchant_request_id': payment.merchant_request_id,
+                    'checkout_request_id': payment.checkout_request_id,
+                    'amount': payment.amount,
+                    'phone_number': payment.phone_number,
+                    'description': payment.description,
+                    'pay_method': payment.pay_method,
+                    'pay_date': payment.pay_date,
+                    'status': payment.status,
+                    'result_desc': payment.result_desc
+                }
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                'message': 'Payment failed',
+                'error': res.get("errorMessage")}, status=status.HTTP_400_BAD_REQUEST)
 
     def get_policy_from_applicant(self, applicant):
         existing_policy= Policy.objects.filter(applicant=applicant).first()
@@ -1808,157 +1859,125 @@ class MpesaPaymentView(APIView):
             return None        
         return existing_policy
 
-# Card payment----------------------------------------------------------------------------------
-class CardPaymentView(APIView):
-    def post(self, request):
-        data = request.data
-        amount = data.get('amount')
-        phone_number = data.get('phone_number') #2547xxxxxxx format
-        description = data.get('description')
-        intasend_url= 'https://sandbox.intasend.com/api/v1/checkout/'
-        pay_method= "CARD-PAYMENT"
-        random_val= create_random_digit()
+    def get_mpesa_token(self):
+        consumer_key = config("MPESA_CONSUMER_KEY")
+        consumer_secret = config("MPESA_CONSUMER_SECRET")
+        api_URL = config('MPESA_TOKEN_URL')
 
-        # Get the user from the token
-        user = get_user_from_token(request)
-        if not user:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        response = requests.get(url=api_URL, auth=HTTPBasicAuth(consumer_key, consumer_secret),)
 
-        # Get the applicant from the user
-        applicant = get_applicant_from_user(user)
-        if not applicant:
-            return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
+        if response.status_code != 200:
+            return None  # Handle the error case in your main function
 
-        # Get the policy from the applicant
-        policy = self.get_policy_from_applicant(applicant)
-        if not policy:
-            return Response({'error': 'Policy not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        if not amount:
-            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-        payload= {
-            "first_name": user.first_name if user.first_name else "",
-            "last_name": user.last_name if user.last_name else "",
-            "phone_number": phone_number,
-            "email": user.email,
-            "method": "CARD-PAYMENT",
-            "amount": amount,
-            "redirect_url": config('INTA_SEND_CARD_REDIRECT_URL'),
-            "currency": 'KES',
-            "card_tarrif": "CUSTOMER-PAYS",
-            "api_ref": random_val,
-            "narrative": description
-        }
-
-        headers = {
-                    "accept": "application/json",
-                    "content-type": "application/json",
-                    "X-IntaSend-Public-API-Key": publishable_key
-                }
-
-        res = requests.post(intasend_url, json=payload, headers=headers).json()
-        # print(res)
-        if res['id']:
-            payment = Payment.objects.create(
-                policy=policy,
-                api_ref_id=res['api_ref'],
-                amount=amount,
-                phone_number=phone_number,
-                pay_method=pay_method,
-                pay_date=timezone.now(),
-                description=description,
-            )
-            return Response({
-                'message': 'Payment created successfully',
-                'data': {
-                    'id': payment.id,
-                    'invoice_id': payment.invoice_id,
-                    'api_ref_id': payment.api_ref_id,
-                    'amount': payment.amount,
-                    'phone_number': payment.phone_number,
-                    'description': payment.description,
-                    'pay_method': payment.pay_method,
-                    'pay_date': payment.pay_date,
-                    'status': payment.status
-                }
-            }, status=status.HTTP_201_CREATED)
-
-    def get_policy_from_applicant(self, applicant):
-        existing_policy= Policy.objects.filter(applicant=applicant).first()
-        if not existing_policy:
+        try:
+            return response.json()['access_token']
+        except json.JSONDecodeError:
             return None
-        return existing_policy
+
+    def get_mpesa_timestamp(self):
+        now = datetime.datetime.now()
+        timestamp = now.strftime("%Y%m%d%H%M%S")
+        return timestamp
     
-# Payment callback function-------------------------------------------------------------------------
-class PaymentCallbackView(APIView):
+    def get_mpesa_password(self):
+        timestamp = self.get_mpesa_timestamp()
+        business_short_code = config('MPESA_SHORT_CODE')
+        passkey = config('MPESA_PASSKEY')
+        password = base64.b64encode((business_short_code + passkey + timestamp).encode()).decode()
+        return password
+
+    def generate_num_letter_token(self):
+        return ''.join(random.choices('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=8))
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class HandleSafCallbackView(APIView):
     def post(self, request):
+
         """
+        {    
+            "Body": {        
+                "stkCallback": {            
+                    "MerchantRequestID": "29115-34620561-1",            
+                    "CheckoutRequestID": "ws_CO_191220191020363925",            
+                    "ResultCode": 0,            
+                    "ResultDesc": "The service request is processed successfully.",            
+                    "CallbackMetadata": {                
+                        "Item": [{                        
+                        "Name": "Amount",                        
+                        "Value": 1.00                    
+                        },                    
+                        {                        
+                        "Name": "MpesaReceiptNumber",                        
+                        "Value": "NLJ7RT61SV"                    
+                        },                    
+                        {                        
+                        "Name": "TransactionDate",                        
+                        "Value": 20191219102115                    
+                        },                    
+                        {                        
+                        "Name": "PhoneNumber",                        
+                        "Value": 254708374149                    
+                        }]            
+                    }        
+                }    
+            }
+        }
+
         {
-            "invoice_id": "BRZKGPR",
-            "state": "PROCESSING",
-            "provider": "CARD-PAYMENT",
-            "charges": "0.00",
-            "net_amount": "10.36",
-            "currency": "KES",
-            "value": "10.36",
-            "account": "john.doe@gmail.com",
-            "api_ref": "ISL_faa26ef9-eb08-4353-b125-ec6a8f022815",
-            "host": "https://sandbox.intasend.com",
-            "failed_reason": null,
-            "failed_code": null,
-            "failed_code_link": "https://intasend.com/troubleshooting",
-            "created_at": "2021-08-18T12:33:50.425886+03:00",
-            "updated_at": "2021-08-18T12:33:51.304105+03:00",
-            "challenge": "testnet"
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': 'c62b-4e23-a479-5f74de8082a11207280',
+                    'CheckoutRequestID': 'ws_CO_14022025162342819723018212',
+                    'ResultCode': 1032,
+                    'ResultDesc': 'Request cancelled by user'
+                }
+            }
         }
         """
-
-        # Extract the callback data from the request
-        callback_data = request.data
-        invoice_id = callback_data.get('invoice_id')
-        state = callback_data.get('state')
-        api_ref = callback_data.get('api_ref')
-
-        if not invoice_id:
-            return Response({'error': 'Invoice ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            data = request.data
+            res_data= data
+            merchant_request_id= res_data['Body']['stkCallback']['MerchantRequestID']
+            checkout_request_id= res_data['Body']['stkCallback']['CheckoutRequestID']
+            result_code= res_data['Body']['stkCallback']['ResultCode']
+            result_desc= res_data['Body']['stkCallback']['ResultDesc']
+            update_payment= Payment.objects.filter(merchant_request_id=merchant_request_id, checkout_request_id=checkout_request_id).first()
+            if not update_payment:
+                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
             
-        if api_ref == 'API Request':
-            if state == 'COMPLETED':
-                payment= Payment.objects.get(invoice_id=invoice_id)
-                if not payment:
-                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
-                payment.status= state
-                payment.save()
-                return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
+            if int(result_code)==0:             
+                transaction_id= res_data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] 
+                update_payment.status= 'PAID'
+                update_payment.result_desc= result_desc
+                update_payment.transaction_id= transaction_id
+                update_payment.save()
+
+                return Response({
+                    'message': 'Payment updated successfully',
+                    'data': {
+                        'id': update_payment.id,
+                        'invoice_id': update_payment.invoice_id,
+                        'merchant_request_id': update_payment.merchant_request_id,
+                        'checkout_request_id': update_payment.checkout_request_id,
+                        'amount': update_payment.amount,
+                        'phone_number': update_payment.phone_number,
+                        'description': update_payment.description,
+                        'pay_method': update_payment.pay_method,
+                        'pay_date': update_payment.pay_date,
+                        'status': update_payment.status
+                    }
+                }, status=status.HTTP_201_CREATED)
             
-            elif state == 'FAILED':
-                payment= Payment.objects.get(invoice_id=invoice_id)
-                if not payment:
-                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
-                payment.status= state
-                payment.save()
-                return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
-        
-        else:
-            if state == 'COMPLETED':
-                payment= Payment.objects.get(api_ref_id=api_ref)
-                if not payment:
-                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
-                payment.status= state
-                payment.save()
-                return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
+            else:
+                update_payment.status= 'FAILED'
+                update_payment.result_desc= result_desc
+                update_payment.save()
+                return Response({
+                    'message': 'Payment failed',
+                    'error': res_data['Body']['stkCallback']['ResultDesc']}, status=status.HTTP_400_BAD_REQUEST)
 
-            elif state == 'FAILED':
-                payment= Payment.objects.get(api_ref_id=api_ref)
-                if not payment:
-                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
-                payment.status= state
-                payment.save()
-                return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
-
-        # Return a response to acknowledge the callback
-        return Response({'message': 'Callback received successfully'}, status=status.HTTP_200_OK)
-
-            
+        except Exception as e:
+            print(e)
+            return e            
 
