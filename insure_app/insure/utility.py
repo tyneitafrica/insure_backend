@@ -33,5 +33,9 @@ def create_random_digit():
                              string.digits, k=7))
     return res
 
+def create_invoice_id():
+    digit= random.randint(100000, 999999)
+    invoice= f"#NL{digit}"
+    return invoice
 
 
