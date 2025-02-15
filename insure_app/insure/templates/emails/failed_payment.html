@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #d9534f;
+            color: #ffffff;
+            padding: 15px;
+            text-align: center;
+            font-size: 20px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        .content {
+            padding: 20px;
+            text-align: center;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #d9534f;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #777777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            Payment Failed Notification
+        </div>
+        <div class="content">
+            <p>Dear {{ applicant_name }},</p>
+            <p>We regret to inform you that your recent payment attempt for <strong>KES {{ amount }}</strong> on <strong>{{ payment_date }}</strong> for invoice {{ invoice_number }} has failed.</p>
+            <p>Possible reasons:
+                <ul style="text-align: left; display: inline-block;">
+                    <li>Insufficient funds</li>
+                    <li>Incorrect payment details</li>
+                    <li>Bank restrictions</li>
+                </ul>
+            </p>
+            <p>Please try again or use a different payment method.</p>
+            <a href="" class="button">Retry Payment</a>
+        </div>
+        <div class="footer">
+            <p><strong>{{ company_name }}</strong></p>
+            <p>If you need assistance, please contact our support team at <a href="mailto:support@nyloid.co.ke">support@nyloid.co.ke</a>.</p>
+        </div>
+    </div>
+</body>
+</html>
