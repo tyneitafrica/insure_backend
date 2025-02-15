@@ -12,6 +12,7 @@ from datetime import date
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
+from .utility import send_invoice_email
 
 
 # Custom User Model
@@ -353,6 +354,14 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.invoice_id} - {self.amount} - {self.pay_method} - {self.pay_date}"
+
+@receiver(post_save, sender=Payment)
+def send_invoice_on_success(sender, instance, **kwargs):
+    print(f"Payment status updated: {instance.status}")
+    if instance.status == "PAID":
+        print(f"Sending invoice for payment ID: {instance.id}")
+        sende= send_invoice_email(instance)
+        print(f"In Models: {sende}")
 
 # to hold user data temporary   
 class MotorInsuranceTempData(models.Model):
