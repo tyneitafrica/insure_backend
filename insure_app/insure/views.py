@@ -1925,12 +1925,12 @@ class HandleSafCallbackView(APIView):
         }
 
         {
-            'Body': {
-                'stkCallback': {
-                    'MerchantRequestID': 'c62b-4e23-a479-5f74de8082a11207280',
-                    'CheckoutRequestID': 'ws_CO_14022025162342819723018212',
-                    'ResultCode': 1032,
-                    'ResultDesc': 'Request cancelled by user'
+            "Body": {
+                "stkCallback": {
+                    "MerchantRequestID": "c62b-4e23-a479-5f74de8082a11207280",
+                    "CheckoutRequestID": "ws_CO_14022025162342819723018212",
+                    "ResultCode": 1032,
+                    "ResultDesc": "Request cancelled by user"
                 }
             }
         }
@@ -1975,7 +1975,7 @@ class HandleSafCallbackView(APIView):
             update_payment.save()
             return Response({
                 'message': 'Payment failed',
-                'error': res_data['Body']['stkCallback']['ResultDesc']}, status=status.HTTP_400_BAD_REQUEST)
+                'error': res_data['Body']['stkCallback']['ResultDesc']}, status=status.HTTP_201_CREATED)
 
         # except Exception as e:
         #     print(e)
