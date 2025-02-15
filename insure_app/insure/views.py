@@ -2010,49 +2010,48 @@ class HandleSafCallbackView(APIView):
             }
         }
         """
-        try:
-            data = request.data
-            res_data= data
-            merchant_request_id= res_data['Body']['stkCallback']['MerchantRequestID']
-            checkout_request_id= res_data['Body']['stkCallback']['CheckoutRequestID']
-            result_code= res_data['Body']['stkCallback']['ResultCode']
-            result_desc= res_data['Body']['stkCallback']['ResultDesc']
-            update_payment= Payment.objects.filter(merchant_request_id=merchant_request_id, checkout_request_id=checkout_request_id).first()
-            if not update_payment:
-                    return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
-            
-            if int(result_code)==0:             
-                transaction_id= res_data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] 
-                update_payment.status= 'PAID'
-                update_payment.result_desc= result_desc
-                update_payment.transaction_id= transaction_id
-                update_payment.save()
+        # try:
+        data = request.data
+        res_data= data
+        merchant_request_id= res_data['Body']['stkCallback']['MerchantRequestID']
+        checkout_request_id= res_data['Body']['stkCallback']['CheckoutRequestID']
+        result_code= res_data['Body']['stkCallback']['ResultCode']
+        result_desc= res_data['Body']['stkCallback']['ResultDesc']
+        update_payment= Payment.objects.filter(merchant_request_id=merchant_request_id, checkout_request_id=checkout_request_id).first()
+        if not update_payment:
+                return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if int(result_code)==0:             
+            transaction_id= res_data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] 
+            update_payment.status= 'PAID'
+            update_payment.result_desc= result_desc
+            update_payment.transaction_id= transaction_id
+            update_payment.save()
 
-                return Response({
-                    'message': 'Payment updated successfully',
-                    'data': {
-                        'id': update_payment.id,
-                        'invoice_id': update_payment.invoice_id,
-                        'merchant_request_id': update_payment.merchant_request_id,
-                        'checkout_request_id': update_payment.checkout_request_id,
-                        'amount': update_payment.amount,
-                        'phone_number': update_payment.phone_number,
-                        'description': update_payment.description,
-                        'pay_method': update_payment.pay_method,
-                        'pay_date': update_payment.pay_date,
-                        'status': update_payment.status
-                    }
-                }, status=status.HTTP_201_CREATED)
-            
-            else:
-                update_payment.status= 'FAILED'
-                update_payment.result_desc= result_desc
-                update_payment.save()
-                return Response({
-                    'message': 'Payment failed',
-                    'error': res_data['Body']['stkCallback']['ResultDesc']}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'message': 'Payment updated successfully',
+                'data': {
+                    'id': update_payment.id,
+                    'invoice_id': update_payment.invoice_id,
+                    'merchant_request_id': update_payment.merchant_request_id,
+                    'checkout_request_id': update_payment.checkout_request_id,
+                    'amount': update_payment.amount,
+                    'phone_number': update_payment.phone_number,
+                    'description': update_payment.description,
+                    'pay_method': update_payment.pay_method,
+                    'pay_date': update_payment.pay_date,
+                    'status': update_payment.status
+                }
+            }, status=status.HTTP_201_CREATED)
+        
+        else:
+            update_payment.status= 'FAILED'
+            update_payment.result_desc= result_desc
+            update_payment.save()
+            return Response({
+                'message': 'Payment failed',
+                'error': res_data['Body']['stkCallback']['ResultDesc']}, status=status.HTTP_400_BAD_REQUEST)
 
-        except Exception as e:
-            print(e)
-            return e            
-
+        # except Exception as e:
+        #     print(e)
+        #     return e
