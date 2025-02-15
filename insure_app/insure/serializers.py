@@ -81,7 +81,7 @@ class RateRangeSerializer(serializers.ModelSerializer):
 class ExcessChargesSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExcessCharges
-        fields = ['motor_insurance','limit_of_liability','excess_rate','min_price','description']
+        fields = ['id','limit_of_liability','excess_rate','min_price','description']
         read_only_fields = ('created_at', 'updated_at')
 
 class MotorInsuranceSerializer(serializers.ModelSerializer):

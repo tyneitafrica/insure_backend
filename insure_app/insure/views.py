@@ -185,8 +185,8 @@ class SignupOrganisation(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
-        companyName= request.data.get('company_name')
-        phoneNumber= request.data.get('phone_number')
+        # companyName= request.data.get('company_name')
+        # phoneNumber= request.data.get('phone_number')
         role = User.Role.ORGANISATION
 
         # check if the user is already registered
@@ -205,7 +205,7 @@ class SignupOrganisation(APIView):
             if serializer.is_valid():
                 user= serializer.save()
                 if user:
-                    organisation= Organisation.objects.create(user=user, company_name=companyName, phone_number=phoneNumber)
+                    organisation= Organisation.objects.create(user=user)
                     organisation.save()                    
               
                 return Response(
@@ -249,7 +249,7 @@ class LoginOrganisation(APIView):
                 value=token,
                 httponly=True,
                 samesite='None',
-                secure=False, # to be switched to true in production
+                secure=True, # to be switched to true in production
             )
             response.data = {
                 'message': f'Welcome {user.first_name} ',
@@ -292,23 +292,23 @@ class CreateMotorInsuranceSession(APIView):
         weight_category = data.get('weight_category')
         selected_excess_charge = data.get("excess_charge")
 
-        def calculate_user_age(yob):
-            if isinstance(yob, str):  # Check if yob is a string
-                yob = datetime.datetime.strptime(yob, "%Y-%m-%d").year  # Convert to datetime and extract year
+        # def calculate_user_age(yob):
+        #     if isinstance(yob, str):  # Check if yob is a string
+        #         yob = datetime.datetime.strptime(yob, "%Y-%m-%d").year  # Convert to datetime and extract year
             
-            current_year = datetime.datetime.now().year
-            age = current_year - yob
-            # print(age) 21
-            return age
+        #     current_year = datetime.datetime.now().year
+        #     age = current_year - yob
+        #     # print(age) 21
+        #     return age
         
-        def car_age(vehicle_year):
-            if isinstance(vehicle_year, str):  # Check if yob is a string
-                vehicle_year = datetime.datetime.strptime(vehicle_year, "%Y-%m-%d").year  # Convert to datetime and extract year
+        # def car_age(vehicle_year):
+        #     if isinstance(vehicle_year, str):  # Check if yob is a string
+        #         vehicle_year = datetime.datetime.strptime(vehicle_year, "%Y-%m-%d").year  # Convert to datetime and extract year
 
-            current_year = datetime.datetime.now().year
-            car_age = current_year - vehicle_year
-            print(car_age)
-            return car_age
+        #     current_year = datetime.datetime.now().year
+        #     car_age = current_year - vehicle_year
+        #     print(car_age)
+        #     return car_age
         
         try:
             # Correctly construct the dictionary
@@ -316,7 +316,7 @@ class CreateMotorInsuranceSession(APIView):
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
-                "age": calculate_user_age(yob) ,
+                # "age": calculate_user_age(yob) ,
                 "id_no": id_no,
                 "occupation": occupation,
                 "gender": gender,
@@ -326,7 +326,7 @@ class CreateMotorInsuranceSession(APIView):
                 "vehicle_make": vehicle_make,
                 "vehicle_model": vehicle_model,
                 "vehicle_year": vehicle_year,
-                "vehicle_age": car_age(vehicle_year),
+                # "vehicle_age": car_age(vehicle_year),
                 "vehicle_registration_number": vehicle_registration_number,
                 "cover_type": cover_type,
                 "vehicle_value": vehicle_value,
@@ -582,21 +582,26 @@ class UploadMotorInsurance(APIView):
             if not motor_insurances.exists():
                 return Response({'message': 'No Motor insurance details found'}, status=status.HTTP_404_NOT_FOUND)
             
-            # query optional_excess_charges if there are there 
-            optional_excess_charges = OptionalExcessCharge.objects.filter(insurance__in=insurance_queryset).select_related('insurance')
-            if not optional_excess_charges.exists():
-                return Response({'message': 'No optional excess charges found'}, status=status.HTTP_404_NOT_FOUND)
-            
-            optional_serializer = AdditionalChargesSerializer(optional_excess_charges, many=True)
-            
+            # Query OptionalExcessCharge if it exists
+            optional_excess_charges = OptionalExcessCharge.objects.filter(insurance__in=insurance_queryset)
+            optional_serializer = AdditionalChargesSerializer(optional_excess_charges, many=True) if optional_excess_charges.exists() else None
+
+            # Serialize MotorInsurance data
             serializer = MotorInsuranceSerializer(motor_insurances, many=True)
             
-            # Return the response
-            return Response({
+            # Prepare response data
+            response_data = {
                 'message': 'Motor insurance policies retrieved successfully',
                 'data': serializer.data,
-                'Additional_charge':optional_serializer.data
-            }, status=status.HTTP_200_OK)
+            }
+
+            # Add optional excess charges to the response if they exist
+            if optional_serializer:
+                response_data['Additional_charge'] = optional_serializer.data
+            else:
+                response_data['Additional_charge'] = []  # Return an empty list if no excess charges exist
+
+            return Response(response_data, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -667,6 +672,7 @@ class MotorInsuranceDetails(APIView):
             get_insurance_id = request.COOKIES.get('motor_insurance')
             if not get_insurance_id:
                 return Response({'error': 'Insurance cookie not found'}, status=status.HTTP_400_BAD_REQUEST)
+            # HTTP_204_NO_CONTENT: unaweza rudisha hii ndio nikiona hii error it just sends the user to start again kwa fronend
 
             insurance = Insurance.objects.get(id=get_insurance_id)
 
@@ -688,7 +694,7 @@ class MotorInsuranceDetails(APIView):
                         risk_type=risk_type_obj,
                         min_value=rate_data.get("min_value"),  # e.g., 2,000,000
                         max_value=rate_data.get("max_value"),  # e.g., 4,000,000
-                        max_age=rate_data.get("max_age", 5),  # e.g., below 5 years
+                        max_car_age=rate_data.get("max_age", 5),  # e.g., below 5 years
                         min_sum_assured=rate_data.get("min_premium"),  # e.g., 40,000
                         usage_category=rate_data.get("usage_category"),  # e.g., Fleet, Standard
                         weight_category=rate_data.get("weight_category"),  # e.g., Up to 3 tons
@@ -820,164 +826,221 @@ class MotorInsuranceBenefits(APIView):
 
 class FilterMotorInsurance(APIView):
     def get(self, request):
+        # try:
+        # Retrieve and decode the cookie
+        signed_data = request.COOKIES.get('user_motor_details')  # Retrieves the user data previously stored in the cookie
+        if not signed_data:
+            return Response({'error': 'No session data found in cookies here '}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Unsigned and deserialize the cookie data
+        sign = Signer()
+        user_details_json = sign.unsign(signed_data)
+        user_details = json.loads(user_details_json)
+        
+        # Extract filter parameters from the cookie
+        vehicle_type = user_details.get('vehicle_type')  # e.g., Private, Commercial, Public Service
+        vehicle_model = user_details.get('vehicle_model')  # e.g., Probox, Sienta
+        cover_type = user_details.get('cover_type')  # e.g., Comprehensive, Third Party Only
+        vehicle_value = user_details.get('vehicle_value')  # e.g., 4,500,000
+        print(type(vehicle_value))
+        vehicle_age = user_details.get('vehicle_age',3)  # e.g., 3 years
+        age = user_details.get('age',21)  # e.g., 25 years
+        # print(age)
+        experience = user_details.get('experience',1)  # e.g., 2 years
+        print(experience)
+        insurance_type = "Motor"  # We're filtering for motor insurance
+        vehicle_category = user_details.get('vehicle_category')
+
+        # print(selected_excess_charge)
+
+        # print("request data:",{
+            # "vehicle_type":vehicle_type,
+            # "vehicle_category":vehicle_category
+            # "vehicle_model":vehicle_model,
+            # "cover_type":cover_type,
+            # "vehicle_value":vehicle_value,
+            # "vehicle_age":vehicle_age,
+            # "age":age,
+            # "experience":experience,
+            # "insurance_type":insurance_type,
+            # "risk_name":user_details.get('risk_name'),
+            # "usage_category":user_details.get('usage_category'),
+            # "weight_category":user_details.get('weight_category'),
+
+
+        # })
+
+        # Step 1: Query the Insurance model for the relevant policies
+        insurance_queryset = Insurance.objects.filter(type=insurance_type)
+        
+        if not insurance_queryset.exists():
+            return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Step 2: Query the MotorInsurance model for the specific details
+        motor_insurances = MotorInsurance.objects.filter(insurance__in=insurance_queryset, cover_type=cover_type)
+        # print(motor_insurances)
+        if not motor_insurances.exists():
+            return Response({'message': 'No motor insurance policies found for the given details'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Step 3: Filter and calculate premiums
+        filtered_insurances_with_premiums = []
+        for insurance in motor_insurances:
+            rate_ranges = RateRange.objects.filter(motor_insurance=insurance)
+            for rate_range in rate_ranges:
+                # Check if the vehicle type matches
+                # print("vehicle_category_db",rate_range.risk_type.vehicle_type.vehicle_category)
+                # print("vehicle_category_session",vehicle_category)
+                if rate_range.risk_type.vehicle_type.vehicle_category != vehicle_category:
+                    continue  # Skip if vehicle type doesn't match
+
+                # Check if the vehicle value and age match the rate range
+                # print("min",rate_range.min_value)
+                # print("vehicle_value",vehicle_value)
+                # print("max",rate_range.max_value)
+                # print("age",vehicle_age)
+                # print("max_age",rate_range.max_car_age)
+                if not (rate_range.min_value <= vehicle_value <= rate_range.max_value and
+                        vehicle_age <= rate_range.max_car_age):
+                    continue  # Skip if vehicle value or age doesn't match
+
+                # For commercial vehicles, check usage and weight categories
+                if vehicle_category == "Commercial":
+                    risk_name = user_details.get('risk_name')
+                    usage_category = user_details.get('usage_category')  # e.g., Fleet, Standard
+                    weight_category = user_details.get('weight_category')  # e.g., Up to 3 tons, 3-8 tons
+                    
+                    # print("vehicle_category", vehicle_category)
+                    # print("risk_name",risk_name)
+                    # print("usage_category",usage_category)
+                    # print("weight_category",weight_category)
+
+                    # print("usage_db",rate_range.usage_category)
+                    # print("weight_db",rate_range.weight_category)
+                    # print("risk_name_db",rate_range.risk_type.risk_name)
+                
+
+                    if (rate_range.usage_category != usage_category or
+                        rate_range.weight_category != weight_category or
+                        rate_range.risk_type.risk_name != risk_name  
+                        ):
+                        continue  # Skip if usage or weight category doesn't match
+
+                # get exesscharges in relation to motor insurance
+
+                excess_charges = ExcessCharges.objects.filter(motor_insurance=insurance)
+                optional_serializer = ExcessChargesSerializer(excess_charges, many=True) if excess_charges.exists() else None
+
+
+                # Calculate base premium
+                x = vehicle_value * (rate_range.rate / 100)
+                print("x", x)
+
+                base_premium  = max(x, rate_range.min_sum_assured)
+                
+                # Retrieve additional charges
+                additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance)
+                under_21_charge = 0
+                under_1_year_charge = 0
+
+                for charge in additional_charges:
+                    if int(age) < 21:
+                        under_21_charge = charge.under_21_age_charge
+                    # if experience < 1:  # Assuming this is driver experience
+                    #     under_1_year_charge = charge.under_1_year_experience_charge
+                
+
+                # Calculate total premium
+                total_premium = base_premium + under_21_charge + under_1_year_charge
+                
+                # Append the insurance details with the calculated premium
+                filtered_insurances_with_premiums.append({
+                    'insurance_id': insurance.id,
+                    'company_name': insurance.insurance.company_name,
+                    'description': insurance.insurance.description,
+                    'cover_type': insurance.cover_type,
+                    'vehicle_type': rate_range.risk_type.vehicle_type.vehicle_category,
+                    "selected_excess": optional_serializer.data,
+                    'risk_type': rate_range.risk_type.risk_name,
+                    'base_premium': base_premium,
+                    'under_21_charge': under_21_charge,
+                    'under_1_year_charge': under_1_year_charge,
+                    'total_premium': total_premium,
+                })
+                break  # Stop checking other rate ranges for this insurance
+
+        if not filtered_insurances_with_premiums:
+            return Response({'message': 'No matching insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # print(filtered_insurances_with_premiums)
+
+        return Response({
+            'message': 'Filtered motor insurance policies retrieved successfully',
+            'data': filtered_insurances_with_premiums,
+        }, status=status.HTTP_200_OK)
+
+        # except Exception as e:
+        #     return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
         try:
-            # Retrieve and decode the cookie
+            # Extract data from the request
             signed_data = request.COOKIES.get('user_motor_details')  # Retrieves the user data previously stored in the cookie
             if not signed_data:
-                return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'No session data found in cookies here '}, status=status.HTTP_400_BAD_REQUEST)
             
             # Unsigned and deserialize the cookie data
             sign = Signer()
             user_details_json = sign.unsign(signed_data)
             user_details = json.loads(user_details_json)
             
-            # Extract filter parameters from the cookie
-            vehicle_type = user_details.get('vehicle_type')  # e.g., Private, Commercial, Public Service
-            vehicle_model = user_details.get('vehicle_model')  # e.g., Probox, Sienta
-            cover_type = user_details.get('cover_type')  # e.g., Comprehensive, Third Party Only
+            data = request.data
+            
+            insurance_id = data.get('insurance_id')
+            selected_excess_charges = data.get('selected_excess_charges', [])
             vehicle_value = user_details.get('vehicle_value')  # e.g., 4,500,000
-            vehicle_age = int(user_details.get('vehicle_age'))  # e.g., 3 years
-            age = int(user_details.get('age'))  # e.g., 25 years
-            experience = int(user_details.get('experience'))  # e.g., 2 years
-            insurance_type = "Motor"  # We're filtering for motor insurance
-            vehicle_category = user_details.get('vehicle_category')
-            selected_excess_charge = user_details.get('excess_charge',[])  # List of selected excess charges (e.g., ["PVT"])
+            premium = data.get('total_premium')
+            # print(selected_excess_charges)
+            if not insurance_id or not selected_excess_charges:
+                return Response({'error': 'Missing required fields: insurance_id or selected_excess_charges'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # print(selected_excess_charge)
+            # Retrieve the insurance policy
+            try:
+                insurance = MotorInsurance.objects.get(id=insurance_id)
+            except MotorInsurance.DoesNotExist:
+                return Response({'error': 'Insurance policy not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            # print("request data:",{
-                # "vehicle_type":vehicle_type,
-                # "vehicle_category":vehicle_category
-                # "vehicle_model":vehicle_model,
-                # "cover_type":cover_type,
-                # "vehicle_value":vehicle_value,
-                # "vehicle_age":vehicle_age,
-                # "age":age,
-                # "experience":experience,
-                # "insurance_type":insurance_type,
-                # "risk_name":user_details.get('risk_name'),
-                # "usage_category":user_details.get('usage_category'),
-                # "weight_category":user_details.get('weight_category'),
+            total_excess_charges = 0
+            for excess_charge_id in selected_excess_charges:
+                try:
+                    excess_charge = ExcessCharges.objects.get(id=excess_charge_id, motor_insurance=insurance)
+                    if excess_charge.excess_rate is None or excess_charge.min_price is None:
+                        continue
+                    excess_amount = max(
+                        vehicle_value * (excess_charge.excess_rate / 100),
+                        excess_charge.min_price
+                    )
+                    # print(f"Excess Charge ID: {excess_charge_id}, Amount: {excess_amount}")
+                    total_excess_charges += int(excess_amount)
+                except ExcessCharges.DoesNotExist:
+                    print(f"Excess charge with ID {excess_charge_id} not found for this insurance policy")
+                    continue
 
 
-            # })
-
-            # Step 1: Query the Insurance model for the relevant policies
-            insurance_queryset = Insurance.objects.filter(type=insurance_type)
-            
-            if not insurance_queryset.exists():
-                return Response({'message': 'No insurance policies found for the given type'}, status=status.HTTP_404_NOT_FOUND)
-            
-            # Step 2: Query the MotorInsurance model for the specific details
-            motor_insurances = MotorInsurance.objects.filter(insurance__in=insurance_queryset, cover_type=cover_type)
-            # print(motor_insurances)
-            if not motor_insurances.exists():
-                return Response({'message': 'No motor insurance policies found for the given details'}, status=status.HTTP_404_NOT_FOUND)
-            
-            # Step 3: Filter and calculate premiums
-            filtered_insurances_with_premiums = []
-            for insurance in motor_insurances:
-                rate_ranges = RateRange.objects.filter(motor_insurance=insurance)
-                for rate_range in rate_ranges:
-                    # Check if the vehicle type matches
-                    # print("vehicle_category_db",rate_range.risk_type.vehicle_type.vehicle_category)
-                    # print("vehicle_category_session",vehicle_category)
-                    if rate_range.risk_type.vehicle_type.vehicle_category != vehicle_category:
-                        continue  # Skip if vehicle type doesn't match
-
-                    # Check if the vehicle value and age match the rate range
-                    # print("min",rate_range.min_value)
-                    # print("vehicle_value",vehicle_value)
-                    # print("max",rate_range.max_value)
-                    # print("age",vehicle_age)
-                    # print("max_age",rate_range.max_car_age)
-                    if not (rate_range.min_value <= vehicle_value <= rate_range.max_value and
-                            vehicle_age <= rate_range.max_car_age):
-                        continue  # Skip if vehicle value or age doesn't match
-
-                    # For commercial vehicles, check usage and weight categories
-                    if vehicle_category == "Commercial":
-                        risk_name = user_details.get('risk_name')
-                        usage_category = user_details.get('usage_category')  # e.g., Fleet, Standard
-                        weight_category = user_details.get('weight_category')  # e.g., Up to 3 tons, 3-8 tons
-                        
-                        # print("vehicle_category", vehicle_category)
-                        # print("risk_name",risk_name)
-                        # print("usage_category",usage_category)
-                        # print("weight_category",weight_category)
-
-                        # print("usage_db",rate_range.usage_category)
-                        # print("weight_db",rate_range.weight_category)
-                        # print("risk_name_db",rate_range.risk_type.risk_name)
-                    
-
-                        if (rate_range.usage_category != usage_category or
-                            rate_range.weight_category != weight_category or
-                            rate_range.risk_type.risk_name != risk_name  
-                            ):
-                            continue  # Skip if usage or weight category doesn't match
-
-                    # Calculate base premium
-                    x = vehicle_value * (rate_range.rate / 100)
-
-                    base_premium  = max(x, rate_range.min_sum_assured)
-                    
-                    # Retrieve additional charges
-                    additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance)
-                    under_21_charge = 0
-                    under_1_year_charge = 0
-
-                    for charge in additional_charges:
-                        if age < 21:
-                            under_21_charge = charge.under_21_age_charge
-                        if experience < 1:  # Assuming this is driver experience
-                            under_1_year_charge = charge.under_1_year_experience_charge
-                    
-
-                    # Calculate total premium
-                    total_premium = base_premium + under_21_charge + under_1_year_charge
-                   
-                    # Add selected excess charges to the total premium
-                    if selected_excess_charge:
-                        excess_charges = ExcessCharges.objects.filter(motor_insurance=insurance)
-                        # print(excess_charges)
-                        for excess_charge in excess_charges:
-                                # print(excess_charge.limit_of_liability)
-                            if excess_charge.limit_of_liability in selected_excess_charge:
-                                # Calculate the excess charge amount
-                                excess_amount = max(
-                                    vehicle_value * (excess_charge.excess_rate / 100),
-                                    excess_charge.min_price
-                                )
-                            
-                                total_premium += excess_amount
-                    # Append the insurance details with the calculated premium
-                    filtered_insurances_with_premiums.append({
-                        'insurance_id': insurance.id,
-                        'company_name': insurance.insurance.company_name,
-                        'cover_type': insurance.cover_type,
-                        'vehicle_type': rate_range.risk_type.vehicle_type.vehicle_category,
-                        'risk_type': rate_range.risk_type.risk_name,
-                        'base_premium': base_premium,
-                        'under_21_charge': under_21_charge,
-                        'under_1_year_charge': under_1_year_charge,
-                        'selected_excess_charges': selected_excess_charge,
-                        'total_premium': total_premium,
-                    })
-                    break  # Stop checking other rate ranges for this insurance
-
-            if not filtered_insurances_with_premiums:
-                return Response({'message': 'No matching insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
+            # Update the total premium
+            total_premium = premium + total_excess_charges
 
             return Response({
-                'message': 'Filtered motor insurance policies retrieved successfully',
-                'data': filtered_insurances_with_premiums,
+                'message': 'Excess charges applied successfully',
+                'data': {
+                    'insurance_id': insurance.id,
+                    'total_premium': total_premium,
+                    'excess_charges': total_excess_charges,
+                }
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
+            return Response({'error': f'An error occurred: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        
 class EditMotorInsurance(APIView):
     def get_object(self, id):
         
