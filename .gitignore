@@ -6,3 +6,4 @@ migrations
 .env
 tests
 env
+*.db

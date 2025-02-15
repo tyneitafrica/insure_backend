@@ -122,7 +122,12 @@ class SignupUser(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
+class MeView(APIView):
+    @method_decorator(csrf_exempt)
+    def get(self, request):
+        user = get_user_from_token(request)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
 # -----------------------------------------APPLICANT LOGIN ----------------------------------#
 class LoginApplicant(APIView):
 
@@ -162,7 +167,8 @@ class LoginApplicant(APIView):
             )
             response.data = {
                 'message': f'Welcome {user.first_name} ',
-                'jwt':token
+                'jwt':token,
+                'user': UserSerializer(user).data
             }
             return response
         
@@ -646,7 +652,7 @@ class UploadMotorInsurance(APIView):
                 value=new_insurance.id,
                 httponly=True,
                 samesite='None',
-                secure=False,
+                secure=True,
                 max_age=3600  # 1 hour
             )
             return response

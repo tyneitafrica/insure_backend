@@ -21,6 +21,7 @@ from insure.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/v1.0/applicant/signup/", SignupUser.as_view(),name="signup user"),
+    path('api/v1.0/applicant/me/', MeView.as_view(),name="me"),
     # login applicant
     path("api/v1.0/applicant/login/", LoginApplicant.as_view(), name="login applicant"),
     # sign up org
