@@ -68,6 +68,9 @@ urlpatterns = [
     # uload applicant kyc 
     path("api/v1.0/applicant/kyc/", ApplicantkycUpload.as_view(), name="kyc"),
 
+    # Policy---------------------------------------------------------------------------------
+    path("api/v1.0/policy/", HandlePolicyByApplicant.as_view(), name="policy"), #POST/ GET all applicant policies
+
     # Payment urls----------------------------------------------------------------------------
     path("api/v1.0/policy-payments/", PaymentView.as_view(), name="policy payments"), #GET all applicant payments
     path("api/v1.0/mpesa-payment/", MpesaPaymentView.as_view(), name="mpesa payment"), #POST
