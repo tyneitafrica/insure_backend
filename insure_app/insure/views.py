@@ -162,7 +162,7 @@ class LoginApplicant(APIView):
                 value=token,
                 httponly=True,
                 samesite='None',
-                secure=False,   #to be switched to true in production
+                secure=True,   #to be switched to true in production
                 max_age=3600, 
             )
             response.data = {
@@ -180,7 +180,7 @@ class LoginApplicant(APIView):
 class LogoutApplicant(APIView):
     def post(self, request):
         response = Response()
-        response.delete_cookie('jwt')
+        response.delete_cookie(key='jwt',samesite='None',)
         response.data = {
             'message': 'Logged out successfully'
         }
@@ -670,7 +670,7 @@ class MotorInsuranceDetails(APIView):
 
         # List of rate ranges
         vehicle_type = data.get("vehicle_type") #either Private
-        risk_type = data.get("risk_type")
+
         rate_ranges = data.get("rate_ranges", [])  # Expecting a list of dictionaries
         excess_charges = data.get("excess_charges", [])  # Expecting a list of dictionaries
 
@@ -691,10 +691,16 @@ class MotorInsuranceDetails(APIView):
 
                 # Get or create VehicleType and RiskType
                 vehicle_type_obj, _ = VehicleType.objects.get_or_create(vehicle_category=vehicle_type)
-                risk_type_obj, _ = RiskType.objects.get_or_create(vehicle_type=vehicle_type_obj, risk_name=risk_type)
 
                 # Create rate ranges
                 for rate_data in rate_ranges:
+                    risk_name = rate_data.get("risk_type")
+                    
+                    # Get or create a RiskType object for this rate range
+                    risk_type_obj, _ = RiskType.objects.get_or_create(
+                        vehicle_type=vehicle_type_obj,
+                        risk_name=risk_name
+                    )
                     RateRange.objects.create(
                         motor_insurance=upload,
                         risk_type=risk_type_obj,

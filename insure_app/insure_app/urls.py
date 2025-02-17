@@ -29,6 +29,10 @@ urlpatterns = [
 
     # login org
     path("api/v1.0/organisation/login/", LoginOrganisation.as_view(), name="login org"),
+    # sign out
+    path("api/v1.0/logout/", LogoutApplicant.as_view(), name="logout"),
+
+
 
 
     path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),   
