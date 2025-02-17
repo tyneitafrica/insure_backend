@@ -315,8 +315,11 @@ class Policy(models.Model):
 
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name="policies")
     insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name="policies")
-    benefits = models.ManyToManyField(Benefit, related_name="policies")
-    policy_number = models.CharField(max_length=100, unique=True)
+    cover_type= models.CharField(max_length=100, null=True, blank=True)
+    risk_name= models.CharField(max_length=100, null=True, blank=True)
+    age= models.IntegerField(null=True, blank=True)
+    policy_number = models.CharField(max_length=200, unique=True)
+    total_amount= models.FloatField(blank=True, null=True)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     duration = models.PositiveIntegerField(default=12)  # in months
