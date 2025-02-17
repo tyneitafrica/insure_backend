@@ -91,7 +91,8 @@ class ApplicantKYC(models.Model):
     valuation_report = models.ImageField(upload_to='valuation_report_images/', null=True, blank=True)
     kra_pin_certificate = models.ImageField(upload_to='kra_pin_certificate_images/', null=True, blank=True)
     log_book = models.ImageField(upload_to='log_book_images/', null=True, blank=True) 
-
+    is_uploded = models.BooleanField(default=False)
+    
     def __str__(self):
         return f"{self.applicant}"
 
