@@ -858,7 +858,8 @@ class FilterMotorInsurance(APIView):
             vehicle_age = user_details.get('vehicle_age',3)  # e.g., 3 years
             age = user_details.get('age',23)  # e.g., 25 years
             print(age)
-            experience = int(user_details.get('experience',1))  # e.g., 2 years
+            experience = user_details.get('experience',1) # e.g., 2 years            
+            # experience = int(user_details.get('experience',1))  # e.g., 2 years
             print(experience)
             insurance_type = "Motor"  # We're filtering for motor insurance
             vehicle_category = user_details.get('vehicle_category')
