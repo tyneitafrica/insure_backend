@@ -27,7 +27,6 @@ SECRET_KEY = 'django-insecure-9+sp99s#p1#=5wyv)0&po206l8kw=ixjzcq)($%$&_!*ffqn7p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 API_KEY = config('API_KEY')
-print(API_KEY)
 
 ALLOWED_HOSTS = ['*']
 
@@ -88,7 +87,7 @@ WSGI_APPLICATION = 'insure_app.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'insure_db.sqlite3',
+        'NAME': BASE_DIR / 'insure_db.db',
     }
 }
 
@@ -160,7 +159,9 @@ AUTH_USER_MODEL = "insure.User"  # register the User table that will act as a co
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "https://sandbox.safaricom.co.ke",
+    "https://api.safaricom.co.ke",
 ]
 
 CORS_ALLOW_HEADERS = [
@@ -175,6 +176,9 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000",  # Replace with your frontend URL
+    "https://sandbox.safaricom.co.ke",
+    "https://api.safaricom.co.ke",
+    
 ]
 
 # CLOUDINARY_STORAGE = {
@@ -185,9 +189,9 @@ CORS_ORIGIN_WHITELIST = [
 # }
 
 # # handles the email notification
-# EMAIL_BACKEND = config("EMAIL_BACKEND")
-# EMAIL_HOST = config("EMAIL_HOST")
-# EMAIL_PORT = config("EMAIL_PORT")
-# EMAIL_USE_TLS = config("EMAIL_USE_TLS")
-# EMAIL_HOST_USER = config("EMAIL_HOST_USER")
-# EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+EMAIL_BACKEND = config("EMAIL_BACKEND")
+EMAIL_HOST = config("EMAIL_HOST")
+EMAIL_PORT = config("EMAIL_PORT")
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")

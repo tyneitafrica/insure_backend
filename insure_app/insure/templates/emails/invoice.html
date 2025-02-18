@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice - {{ invoice_number }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0056b3;
+        }
+        .header h2 {
+            color: #0056b3;
+            margin: 0;
+        }
+        .section {
+            padding: 10px 0;
+        }
+        .section h3 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .details p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .download-btn {
+            display: block;
+            width: 200px;
+            margin-top: 20px;
+            text-align: center;
+            padding: 10px;
+            background-color: #3886F7;
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .download-btn:hover {
+            background-color: #2868C7;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #777;
+        }
+        .footer a {
+            color: #0056b3;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>Invoice - {{ invoice_number }}</h2>
+    </div>
+
+    <div class="section">
+        <h3>Dear {{ applicant_name }},</h3>
+        <p>Thank you for purchasing your insurance policy. Below are your transaction details:</p>
+    </div>
+
+    <div class="section">
+        <h3>Insurance Details</h3>
+        <div class="details">
+            <p><strong>Policy Name:</strong> {{ policy_name }}</p>
+            <p><strong>Policy Number:</strong> {{ policy_number }}</p>
+            <p><strong>Policy Type:</strong> {{ policy_type }}</p>
+            <p><strong>Duration:</strong> {{ policy_duration }}</p>
+        </div>
+        <div>
+            <a href="" class="download-btn">Download Policy</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Benefits</h3>
+        <div class="details">
+            <ul>
+                {% for benefit in benefits %}
+                    <li>{{ benefit.description }} {{benefit.limit_of_liability}}- {{benefit.price}}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Payment Details</h3>
+        <div class="details">
+            <p><strong>Amount Paid:</strong> KES {{ amount }}</p>
+            <p><strong>Transaction ID:</strong> {{ transaction_id }}</p>
+            <p><strong>Payment Date:</strong> {{ payment_date }}</p>
+        </div>
+        <div>
+            <a href="" class="download-btn">Download Invoice</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Customer Details</h3>
+        <div class="details">
+            <p><strong>Name:</strong> {{ applicant_name }}</p>
+            <p><strong>Email:</strong> {{ applicant_email }}</p>
+            <p><strong>Phone:</strong> {{ applicant_phone }}</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>{{ company_name }}</strong></p>
+        <p>Thank you for choosing our services.</p>
+        <p>For support, contact us at <a href="mailto:support@nyloid.co.ke">support@nyloid.co.ke</a></p>
+    </div>
+</div>
+
+</body>
+</html>

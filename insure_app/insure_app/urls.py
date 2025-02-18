@@ -21,6 +21,7 @@ from insure.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/v1.0/applicant/signup/", SignupUser.as_view(),name="signup user"),
+    path('api/v1.0/applicant/me/', MeView.as_view(),name="me"),
     # login applicant
     path("api/v1.0/applicant/login/", LoginApplicant.as_view(), name="login applicant"),
     # sign up org
@@ -28,6 +29,10 @@ urlpatterns = [
 
     # login org
     path("api/v1.0/organisation/login/", LoginOrganisation.as_view(), name="login org"),
+    # sign out
+    path("api/v1.0/logout/", LogoutApplicant.as_view(), name="logout"),
+
+
 
 
     path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),   
@@ -62,6 +67,12 @@ urlpatterns = [
 
     # uload applicant kyc 
     path("api/v1.0/applicant/kyc/", ApplicantkycUpload.as_view(), name="kyc"),
+
+    # Payment urls----------------------------------------------------------------------------
+    path("api/v1.0/policy-payments/", PaymentView.as_view(), name="policy payments"), #GET all applicant payments
+    path("api/v1.0/mpesa-payment/", MpesaPaymentView.as_view(), name="mpesa payment"), #POST
+    path("api/safaricom-callback/", HandleSafCallbackView.as_view(), name="saf payment callback"),
+    # path("api/v1.0/card-payment/", CardPaymentView.as_view(), name="card payment"),#POST
 
 
 
