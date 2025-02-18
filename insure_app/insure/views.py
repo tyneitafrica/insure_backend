@@ -1816,7 +1816,10 @@ class ApplicantkycUpload(APIView):
             # Serialize the KYC data
             kyc_data = ApplicantKYCSerializer(kyc).data
 
-            return Response({'data': kyc_data}, status=status.HTTP_200_OK)
+            return Response({
+                'message':"KYC complete",
+                'data': kyc_data},
+                  status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
