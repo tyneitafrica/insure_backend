@@ -11,8 +11,8 @@ from django.utils.decorators import method_decorator
 from .ussd import *
 import json
 from .utility import *
-from datetime import datetime
-# import datetime
+from datetime import datetime as dt
+import datetime
 from dateutil.relativedelta import relativedelta
 from django.db import transaction
 import requests
@@ -1976,7 +1976,7 @@ class HandlePolicyByApplicant(APIView):
         return f"{initials}{text_num}"
 
     def get_end_date(self, date):
-        date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+        date_obj = dt.strptime(date, "%Y-%m-%d").date()
         new_date = date_obj + relativedelta(months=12)
         print(f"Date {new_date}")
         return new_date
@@ -2026,9 +2026,9 @@ class PaymentView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 class MpesaPaymentView(APIView):
-    def post(self,request):
+    def post(self,request,id):
         data = request.data
-        amount = data.get('amount')
+        # amount = data.get('amount')
         phone_number = data.get('phone_number') # 2547xxxxxxx format
         description = data.get('description') # Describe the payment narrative
 
@@ -2046,10 +2046,11 @@ class MpesaPaymentView(APIView):
             return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # Get the policy from the applicant
-        policy = self.get_policy_from_applicant(applicant)
+        policy = self.get_policy_for_applicant(id)
         if not policy:
             return Response({'error': 'Policy not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
+        amount= policy.total_amount
         if not amount:
             return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -2137,8 +2138,8 @@ class MpesaPaymentView(APIView):
                 'message': 'Payment failed',
                 'error': res.get("errorMessage")}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get_policy_from_applicant(self, applicant):
-        existing_policy= Policy.objects.filter(applicant=applicant).first()
+    def get_policy_for_applicant(self, policy_id):
+        existing_policy= Policy.objects.filter(id=policy_id).first()
         if not existing_policy:
             return None        
         return existing_policy
