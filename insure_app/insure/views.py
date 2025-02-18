@@ -859,7 +859,8 @@ class FilterMotorInsurance(APIView):
             vehicle_age = user_details.get('vehicle_age',3)  # e.g., 3 years
             age = user_details.get('age',23)  # e.g., 25 years
             print(age)
-            experience = int(user_details.get('experience',1))  # e.g., 2 years
+            experience = user_details.get('experience',1) # e.g., 2 years            
+            # experience = int(user_details.get('experience',1))  # e.g., 2 years
             print(experience)
             insurance_type = "Motor"  # We're filtering for motor insurance
             vehicle_category = user_details.get('vehicle_category')
@@ -1798,6 +1799,33 @@ class UpdateMarineInsurance(APIView):
         
 #----------------------------------------------------------------------- KYC FOR MOTOR INSURACE  --------------------------------------------------# 
 class ApplicantkycUpload(APIView):
+    def get(self, request):
+        try:
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Retrieve the applicant associated with the user
+            applicant = get_applicant_from_user(user)
+            if not applicant:
+                return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Retrieve the KYC record associated with the applicant
+            kyc = ApplicantKYC.objects.filter(applicant=applicant,is_uploded=True).first()
+            if not kyc:
+                return Response({'error': 'KYC documents not fully uploaded'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Serialize the KYC data
+            kyc_data = ApplicantKYCSerializer(kyc).data
+
+            return Response({
+                'message':"KYC complete",
+                'data': kyc_data},
+                  status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     def post(self, request):
         data = request.FILES  # Retrieve uploaded files
         national_id = data.get('national_id')
@@ -1830,12 +1858,12 @@ class ApplicantkycUpload(APIView):
                 valuation_report=valuation_report,
                 kra_pin_certificate=kra_pin_certificate,
                 log_book=log_book,
-                is_uploaded=True  # Set the flag to True after all documents are uploaded
+                is_uploded=True  # Set the flag to True after all documents are uploaded
             )
 
             response = Response({
                 'message': 'KYC documents uploaded successfully',
-                'is_uploaded': kyc.is_uploaded,
+                'is_uploaded': kyc.is_uploded,
             }, status=status.HTTP_201_CREATED)
 
             return response
