@@ -56,6 +56,7 @@ urlpatterns = [
     path("api/v1.0/motorinsurance/filter/",FilterMotorInsurance.as_view(), name="filter motor insurance"),  #will handle the filter for getting quotes
     path("api/v1.0/motorinsurance/<int:id>/", EditMotorInsurance.as_view(), name="edit motor insurance"), #will handle the patch and delete of motor insurance
     path("api/v1.0/motorinsurance/optionalcharges/", Additionalcharge.as_view(), name="add optional charges motor insurance"), #will handle the patch and delete of motor insurance
+    path("api/v1.0/motorinsurance/filter/<int:id>/",FilterInsuranceId.as_view(), name="filter insurance by id"),
 
 #    upload marine section 
     path("api/v1.0/applicant/marine_session/", CreateMarineInsuranceSession.as_view(), name="create insurance session"),
@@ -67,9 +68,6 @@ urlpatterns = [
 
     # uload applicant kyc 
     path("api/v1.0/applicant/kyc/", ApplicantkycUpload.as_view(), name="kyc"),
-
-    # Policy---------------------------------------------------------------------------------
-    path("api/v1.0/policy/", HandlePolicyByApplicant.as_view(), name="policy"), #POST/ GET all applicant policies
 
     # Payment urls----------------------------------------------------------------------------
     path("api/v1.0/policy-payments/", PaymentView.as_view(), name="policy payments"), #GET all applicant payments
