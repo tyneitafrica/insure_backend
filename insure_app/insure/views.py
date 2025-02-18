@@ -10,9 +10,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from .ussd import *
 import json
-from django.core.signing import Signer, BadSignature
 from .utility import *
+from datetime import datetime as dt
 import datetime
+from dateutil.relativedelta import relativedelta
 from django.db import transaction
 import requests
 from requests.auth import HTTPBasicAuth
@@ -858,7 +859,8 @@ class FilterMotorInsurance(APIView):
             vehicle_age = user_details.get('vehicle_age',3)  # e.g., 3 years
             age = user_details.get('age',23)  # e.g., 25 years
             print(age)
-            experience = int(user_details.get('experience',1))  # e.g., 2 years
+            experience = user_details.get('experience',1) # e.g., 2 years            
+            # experience = int(user_details.get('experience',1))  # e.g., 2 years
             print(experience)
             insurance_type = "Motor"  # We're filtering for motor insurance
             vehicle_category = user_details.get('vehicle_category')
@@ -1871,6 +1873,144 @@ class ApplicantkycUpload(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# Handle policy model class-----------------------------------------------------------------------------------
+class HandlePolicyByApplicant(APIView):
+    def get(self, request):
+        try:
+            user= get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            current_applicant= get_applicant_from_user(user)
+            if not current_applicant:
+                return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            all_policy= Policy.objects.filter(applicant=current_applicant)
+            if not all_policy:
+                return Response({'error': 'Policy not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer= PolicySerializer(all_policy, many=True)
+            return Response(serializer.data)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request):        
+        user= get_user_from_token(request)
+        if not user:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        current_applicant= get_applicant_from_user(user)
+        if not current_applicant:
+            return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        policy_data= request.COOKIES.get('user_details_with_policies')
+        if not policy_data:
+            return Response({'error': 'Policy data not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        sign= Signer()
+        user_policy_json= sign.unsign_object(policy_data)
+        user_policy= json.loads(user_policy_json)
+
+        """
+        user_policy= {
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "johndoe@example.com",
+            "id_no": null,
+            "occupation": null,
+            "gender": null,
+            "phoneNumber": null,
+            "vehicle_category": "Private",
+            "vehicle_type": "Saloon",
+            "vehicle_make": null,
+            "vehicle_model": "Toyota Corolla",
+            "vehicle_year": 2020,
+            "vehicle_registration_number": null,
+            "cover_type": "Third Party Only",
+            "vehicle_value": 4000001,
+            "cover_start_date": "2025-01-27",
+            "experience": "1",
+            "risk_name": "Motor_Private",
+            "usage_category": null,
+            "weight_category": null,
+            "excess_charge": [
+                "Excess Protector Charge",
+                "PVT"
+            ],
+            "filtered_policies": [
+                {
+                "insurance_id": 1,
+                "company_name": "Aic Insurance",
+                "description": "Motor insurnace for for Britam insurance ",
+                "cover_type": "Third Party Only",
+                "vehicle_type": "Private",
+                "selected_excess": [
+                    {
+                    "id": 1,
+                    "limit_of_liability": "Excess Protector Charge",
+                    "excess_rate": "0.25",
+                    "min_price": "5000.00",
+                    "description": "Excess Protector Charge"
+                    },
+                    {
+                    "id": 2,
+                    "limit_of_liability": "PVT",
+                    "excess_rate": "0.25",
+                    "min_price": "5000.00",
+                    "description": "PVT Charge"
+                    }
+                ],
+                "risk_type": "Motor_Private",
+                "base_premium": 180000.045,
+                "under_21_charge": 0,
+                "under_1_year_charge": 0,
+                "total_premium": 180000.045
+                }
+            ],
+            "total_premium": 252000.045,
+            "excess_charges": 20000,
+            "new_total_premium": 252000.045
+            }
+        """
+        current_insuarance= Insurance.objects.filter(id=user_policy['filtered_policies'][0]['insurance_id']).first()
+        if not current_insuarance:
+            return Response({'error': 'insuarance not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        data= {
+            "applicant": current_applicant,
+            "insurance": current_insuarance,
+            "cover_type": user_policy['cover_type'],
+            "risk_name": user_policy['risk_name'],
+            "age": user_policy['age'],
+            "policy_number": self.generate_policy_number(),
+            "total_amount": user_policy['new_total_premium'],
+            "start_date": user_policy['cover_start_date'],
+            "duration": 12, #specify later
+            "end_date": str(self.get_end_date(user_policy['cover_start_date'])),
+        }
+
+        serializer= PolicySerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(insurance=current_insuarance, applicant=current_applicant)
+            return Response(serializer.data)
+        else:
+            return Response({'error':'Unable to save data'})
+
+    
+    def generate_policy_number(self):
+        initials= "PLN"
+        text_num= create_random_digit()
+        return f"{initials}{text_num}"
+
+    def get_end_date(self, date):
+        date_obj = dt.strptime(date, "%Y-%m-%d").date()
+        new_date = date_obj + relativedelta(months=12)
+        print(f"Date {new_date}")
+        return new_date
+
+   
+
 
 # Get all payment from the db-----------------------------------------------------------------------------------
 class PaymentView(APIView):
@@ -1892,6 +2032,7 @@ class PaymentView(APIView):
             serialized_payments = [
                 {
                     'id': payment.id,
+                    'policy': PolicySerializer(payment.policy).data,
                     'invoice_id': payment.invoice_id,
                     'api_ref_id': payment.api_ref_id,
                     'amount': payment.amount,
@@ -1913,9 +2054,9 @@ class PaymentView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 class MpesaPaymentView(APIView):
-    def post(self,request):
+    def post(self,request,id):
         data = request.data
-        amount = data.get('amount')
+        # amount = data.get('amount')
         phone_number = data.get('phone_number') # 2547xxxxxxx format
         description = data.get('description') # Describe the payment narrative
 
@@ -1933,10 +2074,11 @@ class MpesaPaymentView(APIView):
             return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # Get the policy from the applicant
-        policy = self.get_policy_from_applicant(applicant)
+        policy = self.get_policy_for_applicant(id)
         if not policy:
             return Response({'error': 'Policy not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
+        amount= policy.total_amount
         if not amount:
             return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -2024,8 +2166,8 @@ class MpesaPaymentView(APIView):
                 'message': 'Payment failed',
                 'error': res.get("errorMessage")}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get_policy_from_applicant(self, applicant):
-        existing_policy= Policy.objects.filter(applicant=applicant).first()
+    def get_policy_for_applicant(self, policy_id):
+        existing_policy= Policy.objects.filter(id=policy_id).first()
         if not existing_policy:
             return None        
         return existing_policy
