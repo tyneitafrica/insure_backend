@@ -193,3 +193,8 @@ class PaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'updated_at')
 
 
+class ApplicantKYCSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApplicantKYC
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at') 
