@@ -986,17 +986,12 @@ class FilterMotorInsurance(APIView):
                         'base_premium': base_premium,
                         'under_21_charge': under_21_charge,
                         'under_1_year_charge': under_1_year_charge,
+                        'total_premium':total_premium
                     })
                     break  # Stop checking other rate ranges for this insurance
                 
             if not filtered_insurances_with_premiums:
                 return Response({'message': 'No matching insurance policies found'}, status=status.HTTP_404_NOT_FOUND)
-            
-            # combine user details with the filtered policies :- spread there here my guy
-            user_details['filtered_policies'] = filtered_insurances_with_premiums
-            user_details['total_premium'] = total_premium
-            user_details['excess_charges'] = 0
-            user_details['new_total_premium'] = total_premium
 
             # create a new cookie with the updated data 
             user_details_json = json.dumps(user_details)
@@ -1008,9 +1003,6 @@ class FilterMotorInsurance(APIView):
             response = Response({
                 'message': 'Filtered motor insurance policies retrieved successfully',
                 'data': filtered_insurances_with_premiums,
-                'total_premium': total_premium,
-                "excess_charges":0,
-                "new_total_premium":total_premium
             }, status=status.HTTP_200_OK)
             # print(response)
 
@@ -1115,6 +1107,73 @@ class FilterMotorInsurance(APIView):
 
         except Exception as e:
             return Response({'error': f'An error occurred: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+class FilterInsuranceId(APIView):
+    def get(self, request, id):
+        try:
+            # Retrieve and decode the cookie
+            signed_data = request.COOKIES.get('user_motor_details')
+            if not signed_data:
+                return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Unsigned and deserialize the cookie data
+            sign = Signer()
+            user_details_json = sign.unsign(signed_data)
+            user_details = json.loads(user_details_json)
+            
+            # Extract filter parameters from the cookie
+            vehicle_value = user_details.get('vehicle_value')
+            age = int(user_details.get('age', 23))
+            # experience = int(user_details.get('experience', 1))  # Added experience
+            
+            # Retrieve the specific insurance policy by ID
+            try:
+                insurance = MotorInsurance.objects.get(id=id)
+            except MotorInsurance.DoesNotExist:
+                return Response({'error': 'Insurance policy not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Retrieve rate ranges for the insurance
+            rate_ranges = RateRange.objects.filter(motor_insurance=insurance)
+            selected_rate_range = None
+            base_premium = None
+            
+            for rate_range in rate_ranges:
+                if rate_range.min_value <= vehicle_value <= rate_range.max_value:
+                    selected_rate_range = rate_range
+                    base_premium = max(vehicle_value * (rate_range.rate / 100), float(rate_range.min_sum_assured))
+                    break  # Stop loop once the correct range is found
+            
+            if not selected_rate_range:
+                return Response({'error': 'No matching rate range found for vehicle value'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Retrieve additional charges
+            additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance).first()
+            under_21_charge = additional_charges.under_21_age_charge if age < 21 else 0
+            # under_1_year_charge = additional_charges.under_1_year_experience_charge if experience < 1 else 0
+            
+            # Calculate total premium
+            total_premium = base_premium + under_21_charge
+            
+            # Return the specific insurance policy with calculated premium
+            return Response({
+                'message': 'Insurance policy retrieved successfully',
+                'data': {
+                    'insurance_id': insurance.id,
+                    'company_name': insurance.insurance.company_name,
+                    'description': insurance.insurance.description,
+                    'cover_type': insurance.cover_type,
+                    'vehicle_type': selected_rate_range.risk_type.vehicle_type.vehicle_category,
+                    'risk_type': selected_rate_range.risk_type.risk_name,
+                    'base_premium': base_premium,
+                    'under_21_charge': under_21_charge,
+                    # 'under_1_year_charge': under_1_year_charge,
+                    'total_premium': total_premium,
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         
 class EditMotorInsurance(APIView):
     def get_object(self, id):
