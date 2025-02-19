@@ -876,7 +876,7 @@ class FilterMotorInsurance(APIView):
             print(age)
             experience = user_details.get('experience',1) # e.g., 2 years            
             # experience = int(user_details.get('experience',1))  # e.g., 2 years
-            print(experience)
+            # print(experience)
             insurance_type = "Motor"  # We're filtering for motor insurance
             vehicle_category = user_details.get('vehicle_category')
 
@@ -1083,8 +1083,8 @@ class FilterMotorInsurance(APIView):
                     continue
                 
             
-            print(f"Total Excess Charges: {total_excess_charges}")
-            print (premium)
+            # print(f"Total Excess Charges_well: {total_excess_charges}")
+            # print (premium)
 
 
             # Update the total premium
@@ -1092,7 +1092,7 @@ class FilterMotorInsurance(APIView):
 
             # update the cookie if user chooses excesses
             user_details['new_total_premium'] = total_premium
-            user_details['excess_charges'] = total_excess_charges
+            user_details['new_excess_charges'] = total_excess_charges
 
             # create the new cookie with updated data
             user_details_json = json.dumps(user_details)
