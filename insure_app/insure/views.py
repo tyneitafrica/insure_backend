@@ -1071,7 +1071,7 @@ class FilterMotorInsurance(APIView):
 
 
             # Update the total premium
-            total_premium = premium + total_excess_charges
+            total_premium = float(premium + total_excess_charges)
 
             # update the cookie if user chooses excesses
             user_details['new_total_premium'] = total_premium
@@ -1088,8 +1088,12 @@ class FilterMotorInsurance(APIView):
                 'message': 'Excess charges applied successfully',
                 'data': {
                     'insurance_id': insurance.id,
-                    'total_premium': total_premium,
+                    'company_name': insurance.insurance.company_name,
+                    'description': insurance.insurance.description,
+                    'cover_type': insurance.cover_type,
+                    'base_premium': premium,
                     'excess_charges': total_excess_charges,
+                    'total_premium': total_premium,
                 }
         
             },status=status.HTTP_200_OK)
