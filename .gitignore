@@ -7,3 +7,5 @@ migrations
 tests
 env
 *.db
+
+kyc_images/
