@@ -19,6 +19,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 import base64
 from django.http import JsonResponse
+from cloudinary.uploader import upload
+
 
 # Create your views here.
 # unsign cookie 
@@ -344,7 +346,7 @@ class CreateMotorInsuranceSession(APIView):
                 "weight_category":weight_category,
                 "excess_charge":selected_excess_charge
             }
-            
+            # print(user_details)
             # Serialize the dictionary to JSON
             user_details_json = json.dumps(user_details)
             sign = Signer()
@@ -620,6 +622,7 @@ class UploadMotorInsurance(APIView):
         title = data.get('title')
         description = data.get('description')
         company_name = data.get("company_name")
+        insurance_image = request.FILES.get('insurance_image', None)
 
         try:
             # Retrieve user from token
@@ -628,13 +631,24 @@ class UploadMotorInsurance(APIView):
             # Retrieve organisation associated with the user
             organisation = get_organisation_from_user(user)
 
+            # print("requested files",{
+            #     'title': title,
+            #     'description': description,
+            #     'company_name': company_name,
+            #     'insurance_image': insurance_image
+            # })
+
+            if not all([title, description, company_name]):
+                return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+
             # Create a new insurance entry
             new_insurance = Insurance.objects.create(
                 organisation=organisation,
                 type=type,
                 title=title,
                 description=description,
-                company_name=company_name
+                company_name=company_name,
+                insurance_image = insurance_image
             )
 
             response = Response({
@@ -644,7 +658,8 @@ class UploadMotorInsurance(APIView):
                     "company":new_insurance.company_name,
                     'type': new_insurance.type,
                     'title': new_insurance.title,
-                    'description': new_insurance.description
+                    'description': new_insurance.description,
+                    'insurance_image': new_insurance.insurance_image.url if new_insurance.insurance_image else None
                 }
             }, status=status.HTTP_201_CREATED)
 
@@ -1071,7 +1086,7 @@ class FilterMotorInsurance(APIView):
             print (premium)
 
             # Update the total premium
-            total_premium = premium + total_excess_charges
+            total_premium = float(premium + total_excess_charges)
 
             # update the cookie if user chooses excesses
             user_details['new_total_premium'] = total_premium
@@ -1088,8 +1103,12 @@ class FilterMotorInsurance(APIView):
                 'message': 'Excess charges applied successfully',
                 'data': {
                     'insurance_id': insurance.id,
-                    'total_premium': total_premium,
+                    'company_name': insurance.insurance.company_name,
+                    'description': insurance.insurance.description,
+                    'cover_type': insurance.cover_type,
+                    'base_premium': premium,
                     'excess_charges': total_excess_charges,
+                    'total_premium': total_premium,
                 }
         
             },status=status.HTTP_200_OK)
@@ -1150,12 +1169,27 @@ class FilterInsuranceId(APIView):
             additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance).first()
             under_21_charge = additional_charges.under_21_age_charge if age < 21 else 0
             # under_1_year_charge = additional_charges.under_1_year_experience_charge if experience < 1 else 0
+            # exess_charges that are in relation to motor insurance
+            excess_charges = ExcessCharges.objects.filter(motor_insurance=insurance)
+            optional_serializer = ExcessChargesSerializer(excess_charges, many=True) if excess_charges.exists() else None
             
             # Calculate total premium
-            total_premium = base_premium + under_21_charge
+            total_premium = float(base_premium + under_21_charge)
+
+
+            # update the cookie if user chooses excesses
+            user_details['new_total_premium'] = total_premium
+
+            # create the new cookie with updated data
+            user_details_json = json.dumps(user_details)
+            
+            print(user_details_json)
+            
+            sign = Signer()
+            signed_data = sign.sign(user_details_json)
             
             # Return the specific insurance policy with calculated premium
-            return Response({
+            response = Response({
                 'message': 'Insurance policy retrieved successfully',
                 'data': {
                     'insurance_id': insurance.id,
@@ -1168,8 +1202,19 @@ class FilterInsuranceId(APIView):
                     'under_21_charge': under_21_charge,
                     # 'under_1_year_charge': under_1_year_charge,
                     'total_premium': total_premium,
+                    'Excess_benefits': optional_serializer.data if optional_serializer else None,
                 }
             }, status=status.HTTP_200_OK)
+
+            response.set_cookie(
+                key="user_motor_details_policy",
+                value=signed_data,
+                httponly=True,
+                samesite='None',
+                secure=True,
+                max_age=3600, #expire 1hr
+            )
+            return response
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -1892,6 +1937,14 @@ class ApplicantkycUpload(APIView):
         valuation_report = data.get('valuation_report')
         kra_pin_certificate = data.get('kra_pin_certificate')
         log_book = data.get('log_book')
+
+        print("request_files",{
+            'national_id': national_id,
+            'driving_license': driving_license,
+            'valuation_report': valuation_report,
+            'kra_pin_certificate': kra_pin_certificate,
+            'log_book': log_book
+        })
 
         try:
             # Retrieve the user from the token

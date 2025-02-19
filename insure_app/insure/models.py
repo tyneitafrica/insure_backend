@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
 from .utility import send_invoice_email, send_invoice_pay_failure_email
+from cloudinary_storage.storage import RawMediaCloudinaryStorage
+
 
 
 # Custom User Model
@@ -86,11 +88,11 @@ class Applicant(models.Model):
     
 class ApplicantKYC(models.Model):
     applicant = models.OneToOneField(Applicant, on_delete=models.CASCADE, related_name='kyc_details')
-    national_id  = models.ImageField(upload_to='national_id_images/', null=True, blank=True)
-    driving_license = models.ImageField(upload_to='driving_license_images/', null=True, blank=True)
-    valuation_report = models.ImageField(upload_to='valuation_report_images/', null=True, blank=True)
-    kra_pin_certificate = models.ImageField(upload_to='kra_pin_certificate_images/', null=True, blank=True)
-    log_book = models.ImageField(upload_to='log_book_images/', null=True, blank=True) 
+    national_id  = models.ImageField(upload_to='national_id_images/', null=True, blank=True,storage=RawMediaCloudinaryStorage())
+    driving_license = models.ImageField(upload_to='driving_license_images/', null=True, blank=True,storage=RawMediaCloudinaryStorage())
+    valuation_report = models.ImageField(upload_to='valuation_report_images/', null=True, blank=True,storage=RawMediaCloudinaryStorage())
+    kra_pin_certificate = models.ImageField(upload_to='kra_pin_certificate_images/', null=True, blank=True,storage=RawMediaCloudinaryStorage())
+    log_book = models.ImageField(upload_to='log_book_images/', null=True, blank=True,storage=RawMediaCloudinaryStorage()) 
     is_uploded = models.BooleanField(default=False)
     
     def __str__(self):
@@ -122,7 +124,7 @@ class Insurance(models.Model):
     
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='insurances')
     company_name= models.CharField(max_length=200, null=True, blank=True)
-    insurance_image = models.ImageField(upload_to='insurance_images/', null=True, blank=True) #will handle profile image of a insurance company
+    insurance_image = models.ImageField(upload_to='insurance_images/', null=True, blank=True, storage=RawMediaCloudinaryStorage()) #will handle profile image of a insurance company
     type = models.CharField(max_length=50, choices=TYPE_CHOICES)
     title = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
