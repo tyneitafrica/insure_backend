@@ -344,7 +344,7 @@ class CreateMotorInsuranceSession(APIView):
                 "weight_category":weight_category,
                 "excess_charge":selected_excess_charge
             }
-            
+            # print(user_details)
             # Serialize the dictionary to JSON
             user_details_json = json.dumps(user_details)
             sign = Signer()
@@ -1150,12 +1150,27 @@ class FilterInsuranceId(APIView):
             additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance).first()
             under_21_charge = additional_charges.under_21_age_charge if age < 21 else 0
             # under_1_year_charge = additional_charges.under_1_year_experience_charge if experience < 1 else 0
+            # exess_charges that are in relation to motor insurance
+            excess_charges = ExcessCharges.objects.filter(motor_insurance=insurance)
+            optional_serializer = ExcessChargesSerializer(excess_charges, many=True) if excess_charges.exists() else None
             
             # Calculate total premium
-            total_premium = base_premium + under_21_charge
+            total_premium = float(base_premium + under_21_charge)
+
+
+            # update the cookie if user chooses excesses
+            user_details['new_total_premium'] = total_premium
+
+            # create the new cookie with updated data
+            user_details_json = json.dumps(user_details)
+            
+            print(user_details_json)
+            
+            sign = Signer()
+            signed_data = sign.sign(user_details_json)
             
             # Return the specific insurance policy with calculated premium
-            return Response({
+            response = Response({
                 'message': 'Insurance policy retrieved successfully',
                 'data': {
                     'insurance_id': insurance.id,
@@ -1168,8 +1183,19 @@ class FilterInsuranceId(APIView):
                     'under_21_charge': under_21_charge,
                     # 'under_1_year_charge': under_1_year_charge,
                     'total_premium': total_premium,
+                    'Excess_benefits': optional_serializer.data if optional_serializer else None,
                 }
             }, status=status.HTTP_200_OK)
+
+            response.set_cookie(
+                key="user_motor_details_policy",
+                value=signed_data,
+                httponly=True,
+                samesite='None',
+                secure=True,
+                max_age=3600, #expire 1hr
+            )
+            return response
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
