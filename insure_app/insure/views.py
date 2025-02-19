@@ -860,6 +860,7 @@ class FilterMotorInsurance(APIView):
             age = user_details.get('age',23)  # e.g., 25 years
             print(age)
             experience = user_details.get('experience',1) # e.g., 2 years            
+            # experience = user_details.get('experience',1) # e.g., 2 years
             # experience = int(user_details.get('experience',1))  # e.g., 2 years
             print(experience)
             insurance_type = "Motor"  # We're filtering for motor insurance
@@ -1068,7 +1069,6 @@ class FilterMotorInsurance(APIView):
             
             print(f"Total Excess Charges: {total_excess_charges}")
             print (premium)
-
 
             # Update the total premium
             total_premium = premium + total_excess_charges
