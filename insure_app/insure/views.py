@@ -963,10 +963,10 @@ class FilterMotorInsurance(APIView):
 
                     # Calculate base premium
                     x = vehicle_value * (rate_range.rate / 100)
-                    print("x", x)
+                    # print("x", x)
 
                     base_premium  = float(max(x, rate_range.min_sum_assured))
-                    print("base_premium", base_premium)
+                    # print("base_premium", base_premium)
                     
                     # Retrieve additional charges
                     additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance)
@@ -985,15 +985,16 @@ class FilterMotorInsurance(APIView):
                     # Calculate total premium
                     total_premium = float(base_premium + under_21_charge + under_1_year_charge)
                     
-                    print("total_premium", total_premium)
-                    print("under_21_charge", under_21_charge)
-                    print("under_1_year_charge", under_1_year_charge)
-                    print("base_premium", base_premium)
+                    # print("total_premium", total_premium)
+                    # print("under_21_charge", under_21_charge)
+                    # print("under_1_year_charge", under_1_year_charge)
+                    # print("base_premium", base_premium)
                     
                     # Append the insurance details with the calculated premium
                     filtered_insurances_with_premiums.append({
                         'insurance_id': insurance.id,
                         'company_name': insurance.insurance.company_name,
+                        'logo': insurance.insurance.insurance_image.url if insurance.insurance.insurance_image else None,
                         'description': insurance.insurance.description,
                         'cover_type': insurance.cover_type,
                         'vehicle_type': rate_range.risk_type.vehicle_type.vehicle_category,
@@ -1011,7 +1012,7 @@ class FilterMotorInsurance(APIView):
 
             # create a new cookie with the updated data 
             user_details_json = json.dumps(user_details)
-            print(user_details_json)
+            # print(user_details_json)
 
             sign = Signer()
             signed_data = sign.sign(user_details_json)
@@ -1033,6 +1034,7 @@ class FilterMotorInsurance(APIView):
             )
 
             return response
+        
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1194,6 +1196,7 @@ class FilterInsuranceId(APIView):
                 'data': {
                     'insurance_id': insurance.id,
                     'company_name': insurance.insurance.company_name,
+                    'logo': insurance.insurance.insurance_image.url if insurance.insurance.insurance_image else None,
                     'description': insurance.insurance.description,
                     'cover_type': insurance.cover_type,
                     'vehicle_type': selected_rate_range.risk_type.vehicle_type.vehicle_category,
