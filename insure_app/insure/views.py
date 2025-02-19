@@ -1091,8 +1091,9 @@ class FilterMotorInsurance(APIView):
             total_premium = float(premium + total_excess_charges)
 
             # update the cookie if user chooses excesses
-            user_details['new_total_premium'] = total_premium
+            user_details['base_premium'] = premium
             user_details['new_excess_charges'] = total_excess_charges
+            user_details['new_total_premium'] = total_premium
 
             # create the new cookie with updated data
             user_details_json = json.dumps(user_details)
@@ -1116,7 +1117,7 @@ class FilterMotorInsurance(APIView):
             },status=status.HTTP_200_OK)
 
             response.set_cookie(
-                key="user_details_with_policies",
+                key="user_details_with_policies_patch",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
@@ -1133,7 +1134,7 @@ class FilterInsuranceId(APIView):
     def get(self, request, id):
         try:
             # Retrieve and decode the cookie
-            signed_data = request.COOKIES.get('user_motor_details')
+            signed_data = request.COOKIES.get('user_details_with_policies_patch')
             if not signed_data:
                 return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -1147,7 +1148,10 @@ class FilterInsuranceId(APIView):
             age = int(user_details.get('age', 23))
             # experience = int(user_details.get('experience', 1))  # Added experience
             
-            # Retrieve the specific insurance policy by ID
+            # Check if the user has already added benefits (via PATCH)
+            new_total_premium = user_details.get('new_total_premium')
+            new_excess_charges = user_details.get('new_excess_charges', 0)            # Retrieve the specific insurance policy by ID
+            
             try:
                 insurance = MotorInsurance.objects.get(id=id)
             except MotorInsurance.DoesNotExist:
@@ -1171,21 +1175,31 @@ class FilterInsuranceId(APIView):
             additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance).first()
             under_21_charge = additional_charges.under_21_age_charge if age < 21 else 0
             # under_1_year_charge = additional_charges.under_1_year_experience_charge if experience < 1 else 0
+            
+            if new_total_premium:
+                total_premium = float(new_total_premium)
+            
+            else:
+                total_premium = float(base_premium + under_21_charge)
+            
+            
             # exess_charges that are in relation to motor insurance
             excess_charges = ExcessCharges.objects.filter(motor_insurance=insurance)
             optional_serializer = ExcessChargesSerializer(excess_charges, many=True) if excess_charges.exists() else None
             
             # Calculate total premium
-            total_premium = float(base_premium + under_21_charge)
 
 
             # update the cookie if user chooses excesses
             user_details['new_total_premium'] = total_premium
+            user_details['new_excess_charges'] = new_excess_charges
+
 
             # create the new cookie with updated data
             user_details_json = json.dumps(user_details)
-            
             print(user_details_json)
+            
+            # print(user_details_json)
             
             sign = Signer()
             signed_data = sign.sign(user_details_json)
@@ -1205,7 +1219,8 @@ class FilterInsuranceId(APIView):
                     'under_21_charge': under_21_charge,
                     # 'under_1_year_charge': under_1_year_charge,
                     'total_premium': total_premium,
-                    'Excess_benefits': optional_serializer.data if optional_serializer else None,
+                    'excess_charges': new_excess_charges,
+                    'excess_benefits': optional_serializer.data if optional_serializer else None,
                 }
             }, status=status.HTTP_200_OK)
 
