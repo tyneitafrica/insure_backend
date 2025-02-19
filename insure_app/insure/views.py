@@ -19,6 +19,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 import base64
 from django.http import JsonResponse
+from cloudinary.uploader import upload
+
 
 # Create your views here.
 # unsign cookie 
@@ -620,6 +622,7 @@ class UploadMotorInsurance(APIView):
         title = data.get('title')
         description = data.get('description')
         company_name = data.get("company_name")
+        insurance_image = request.FILES.get('insurance_image', None)
 
         try:
             # Retrieve user from token
@@ -628,13 +631,24 @@ class UploadMotorInsurance(APIView):
             # Retrieve organisation associated with the user
             organisation = get_organisation_from_user(user)
 
+            # print("requested files",{
+            #     'title': title,
+            #     'description': description,
+            #     'company_name': company_name,
+            #     'insurance_image': insurance_image
+            # })
+
+            if not all([title, description, company_name]):
+                return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+
             # Create a new insurance entry
             new_insurance = Insurance.objects.create(
                 organisation=organisation,
                 type=type,
                 title=title,
                 description=description,
-                company_name=company_name
+                company_name=company_name,
+                insurance_image = insurance_image
             )
 
             response = Response({
@@ -644,7 +658,8 @@ class UploadMotorInsurance(APIView):
                     "company":new_insurance.company_name,
                     'type': new_insurance.type,
                     'title': new_insurance.title,
-                    'description': new_insurance.description
+                    'description': new_insurance.description,
+                    'insurance_image': new_insurance.insurance_image.url if new_insurance.insurance_image else None
                 }
             }, status=status.HTTP_201_CREATED)
 
@@ -1922,6 +1937,14 @@ class ApplicantkycUpload(APIView):
         valuation_report = data.get('valuation_report')
         kra_pin_certificate = data.get('kra_pin_certificate')
         log_book = data.get('log_book')
+
+        print("request_files",{
+            'national_id': national_id,
+            'driving_license': driving_license,
+            'valuation_report': valuation_report,
+            'kra_pin_certificate': kra_pin_certificate,
+            'log_book': log_book
+        })
 
         try:
             # Retrieve the user from the token
