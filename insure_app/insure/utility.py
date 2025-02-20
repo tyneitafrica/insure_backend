@@ -99,6 +99,22 @@ def send_invoice_email(payment):
         html_message=html_content,
     )
 
+# Patch policy utility function
+def patch_policy(payment):
+    from .models import Policy
+    policy= payment.policy
+    status= payment.status
+    current_policy= Policy.objects.filter(id= policy.id).first()
+    if not current_policy:
+        return None
+
+    if status == 'PAID':
+        current_policy.status= 'ACTIVE'
+        current_policy.save()
+    elif status == 'FAILED':
+        current_policy.status= 'CANCELLED'
+        current_policy.save()
+
 # import uuid
 def generate_otp():
     characters = string.ascii_letters + string.digits
