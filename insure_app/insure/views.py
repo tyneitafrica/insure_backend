@@ -1225,6 +1225,7 @@ class FilterInsuranceId(APIView):
 
 
             # update the cookie if user chooses excesses
+            user_details['insurance_id'] = id
             user_details['new_total_premium'] = total_premium
             user_details['new_excess_charges'] = new_excess_charges
 
@@ -1252,7 +1253,7 @@ class FilterInsuranceId(APIView):
                     'under_21_charge': under_21_charge,
                     # 'under_1_year_charge': under_1_year_charge,
                     'total_premium': total_premium,
-                    'excess_charges': new_excess_charges,
+                    'excess_charges': new_excess_charges if  new_excess_charges else None,
                     'excess_benefits': optional_serializer.data if optional_serializer else None,
                 }
             }, status=status.HTTP_200_OK)
