@@ -2303,7 +2303,7 @@ class MpesaPaymentView(APIView):
         if Payment.objects.filter(invoice_id=invoice_id).exists():
             invoice_id=create_invoice_id()
 
-        callback_url = config('MPESA_CALLBACK_URL')
+        callback_url = "https://insure-backend.onrender.com/api/safaricom-callback/" # Change on deployment
         # account_reference = self.generate_num_letter_token()
         transaction_desc = "Payment for Insuarance Service"
         api_url = config('MPESA_STK_PUSH_URL')
