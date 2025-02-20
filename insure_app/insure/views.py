@@ -1034,7 +1034,7 @@ class FilterMotorInsurance(APIView):
             # print(response)
 
             response.set_cookie(
-                key="user_details_with_policies",
+                key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
@@ -1051,7 +1051,7 @@ class FilterMotorInsurance(APIView):
     def patch(self, request):
         try:
             # Extract data from the request
-            signed_data = request.COOKIES.get('user_details_with_policies')  # Retrieves the user data previously stored in the cookie
+            signed_data = request.COOKIES.get('user_motor_details')  # Retrieves the user data previously stored in the cookie
             if not signed_data:
                 return Response({'error': 'No session data found in cookies here '}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -1135,7 +1135,7 @@ class FilterMotorInsurance(APIView):
             },status=status.HTTP_200_OK)
 
             response.set_cookie(
-                key="user_details_with_policies_patch",
+                key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
@@ -1152,7 +1152,7 @@ class FilterInsuranceId(APIView):
     def get(self, request, id):
         try:
             # Retrieve and decode the cookie
-            signed_data = request.COOKIES.get('user_details_with_policies_patch')
+            signed_data = request.COOKIES.get('user_motor_details')
             if not signed_data:
                 return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -1209,6 +1209,7 @@ class FilterInsuranceId(APIView):
 
 
             # update the cookie if user chooses excesses
+            user_details['insurance_id'] = id
             user_details['new_total_premium'] = total_premium
             user_details['new_excess_charges'] = new_excess_charges
 
@@ -1237,13 +1238,13 @@ class FilterInsuranceId(APIView):
                     'under_21_charge': under_21_charge,
                     # 'under_1_year_charge': under_1_year_charge,
                     'total_premium': total_premium,
-                    'excess_charges': new_excess_charges,
+                    'excess_charges': new_excess_charges if  new_excess_charges else None,
                     'excess_benefits': optional_serializer.data if optional_serializer else None,
                 }
             }, status=status.HTTP_200_OK)
 
             response.set_cookie(
-                key="user_motor_details_policy",
+                key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
