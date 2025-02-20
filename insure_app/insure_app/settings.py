@@ -20,13 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-is_production = config('ENVIRONMENT', default="development") == 'production'
+# is_production = config('ENVIRONMENT', default="development") == 'production'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-9+sp99s#p1#=5wyv)0&po206l8kw=ixjzcq)($%$&_!*ffqn7p'
-SECRET_KEY = config('SECRET_KEY')
+# SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -96,34 +96,34 @@ WSGI_APPLICATION = 'insure_app.wsgi.application'
 
 # postgres database 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql' if is_production else 'django.db.backends.sqlite3',
-        'NAME': config('DB_NAME') if is_production else BASE_DIR / 'insure_db.sqlite3',
-        'USER': config('DB_USER') if is_production else '',
-        'PASSWORD': config('DB_PASSWORD') if is_production else '',
-        'HOST': config('DB_HOST') if is_production else '',
-        'PORT': config('DB_PORT') if is_production else '',
-        'OPTIONS': {
-            'sslmode': 'require',
-        } if is_production else {},
-    }
-}
-
-# # postgres database 
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': config('DB_NAME'),
-#         'USER': config('DB_USER'),
-#         'PASSWORD': config('DB_PASSWORD'),
-#         'HOST': config('DB_HOST'),
-#         'PORT': config('DB_PORT'),
+#         'ENGINE': 'django.db.backends.postgresql' if is_production else 'django.db.backends.sqlite3',
+#         'NAME': config('DB_NAME') if is_production else BASE_DIR / 'insure_db.sqlite3',
+#         'USER': config('DB_USER') if is_production else '',
+#         'PASSWORD': config('DB_PASSWORD') if is_production else '',
+#         'HOST': config('DB_HOST') if is_production else '',
+#         'PORT': config('DB_PORT') if is_production else '',
 #         'OPTIONS': {
-#             'sslmode': 'require',  # This enforces SSL encryption
-#         },
+#             'sslmode': 'require',
+#         } if is_production else {},
 #     }
 # }
+
+# # postgres database 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
+        'OPTIONS': {
+            'sslmode': 'require',  # This enforces SSL encryption
+        },
+    }
+}
 
 
 # Password validation
