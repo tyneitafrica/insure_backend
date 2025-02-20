@@ -39,15 +39,17 @@ class ApplicantSerializer(serializers.ModelSerializer):
 
 
 class OrganisationSerializer(serializers.ModelSerializer):
+    user= UserSerializer(read_only=True)
     class Meta:
         model = Organisation
-        fields = ['id', 'user', 'companyName', 'phoneNumber', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'company_name', 'phone_number', 'created_at', 'updated_at']
 
 
 class InsuranceSerializer(serializers.ModelSerializer):
+    organisation= OrganisationSerializer(read_only=True)
     class Meta:
         model = Insurance
-        fields = ['id', 'organisation', 'company_name','insurance_image','title', 'type', 'description']
+        fields = ['id', 'organisation', 'company_name','insurance_image','title', 'type', 'description','created_at', 'updated_at']
         read_only_fields = ('created_at', 'updated_at')
 
 class VehicleTypeSerializer(serializers.ModelSerializer):
@@ -123,7 +125,7 @@ class PolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = Policy
         fields = [
-            'id', 'applicant', 'insurance', 'cover_type', 'risk_name', 'age','policy_number', 'total_amount' ,'start_date', 'end_date', 'duration', 'status', 'created_at', 'updated_at'
+            'id', 'applicant', 'insurance', 'cover_type', 'risk_name', 'age', 'policy_number', 'total_amount' ,'start_date', 'end_date', 'duration', 'status', 'created_at', 'updated_at'
         ]
         read_only_fields = ('created_at', 'updated_at')
 
