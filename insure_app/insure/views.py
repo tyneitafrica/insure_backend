@@ -2052,7 +2052,7 @@ class HandlePolicyByApplicant(APIView):
         if not current_applicant:
             return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        policy_data= request.COOKIES.get('user_details_with_policies')
+        policy_data= request.COOKIES.get('user_motor_details')
         if not policy_data:
             return Response({'error': 'Policy data not found'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -2060,68 +2060,48 @@ class HandlePolicyByApplicant(APIView):
         user_policy_json= sign.unsign_object(policy_data)
         user_policy= json.loads(user_policy_json)
 
+        # user_policy= request.data
+        # print(user_policy)
+
         """
-        user_policy= {
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "johndoe@example.com",
-            "id_no": null,
-            "occupation": null,
-            "gender": null,
-            "phoneNumber": null,
-            "vehicle_category": "Private",
-            "vehicle_type": "Saloon",
-            "vehicle_make": null,
-            "vehicle_model": "Toyota Corolla",
-            "vehicle_year": 2020,
-            "vehicle_registration_number": null,
-            "cover_type": "Third Party Only",
-            "vehicle_value": 4000001,
-            "cover_start_date": "2025-01-27",
-            "experience": "1",
-            "risk_name": "Motor_Private",
-            "usage_category": null,
-            "weight_category": null,
-            "excess_charge": [
-                "Excess Protector Charge",
-                "PVT"
-            ],
-            "filtered_policies": [
-                {
-                "insurance_id": 1,
-                "company_name": "Aic Insurance",
-                "description": "Motor insurnace for for Britam insurance ",
-                "cover_type": "Third Party Only",
-                "vehicle_type": "Private",
-                "selected_excess": [
-                    {
-                    "id": 1,
-                    "limit_of_liability": "Excess Protector Charge",
-                    "excess_rate": "0.25",
-                    "min_price": "5000.00",
-                    "description": "Excess Protector Charge"
-                    },
-                    {
-                    "id": 2,
-                    "limit_of_liability": "PVT",
-                    "excess_rate": "0.25",
-                    "min_price": "5000.00",
-                    "description": "PVT Charge"
-                    }
-                ],
-                "risk_type": "Motor_Private",
-                "base_premium": 180000.045,
-                "under_21_charge": 0,
-                "under_1_year_charge": 0,
-                "total_premium": 180000.045
-                }
-            ],
-            "total_premium": 252000.045,
-            "excess_charges": 20000,
-            "new_total_premium": 252000.045
+        {
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "johndoe@example.com",
+        "id_no": "1234567788",
+        "occupation": null,
+        "gender": null,
+        "phoneNumber": "0712345678",
+        "vehicle_category": "Private",
+        "vehicle_type": "Saloon",
+        "vehicle_make": null,
+        "vehicle_model": "Toyota Corolla",
+        "vehicle_year": 2020,
+        "vehicle_registration_number": null,
+        "cover_type": "Third Party Only",
+        "vehicle_value": 4000001,
+        "cover_start_date": "2025-01-27",
+        "experience": "1",
+        "risk_name": "Motor_Private",
+        "usage_category": null,
+        "weight_category": null,
+        "excess_charge": null,
+        "base_premium": 180000.045,
+        "new_excess_charges": 10000,
+        "new_total_premium": 190000.045,
+        "excess": [
+            {
+            "id": 1,
+            "limit_of_liability": "Excess Protector Charge",
+            "excess_rate": "0.25",
+            "min_price": "2000.00",
+            "description": "Excess Protector Charge"
             }
+        ],
+        "insurance_id": 1
+        }
         """
-        current_insuarance= Insurance.objects.filter(id=user_policy['filtered_policies'][0]['insurance_id']).first()
+        current_insuarance= Insurance.objects.filter(id=user_policy['insurance_id']).first()
         if not current_insuarance:
             return Response({'error': 'insuarance not found'}, status=status.HTTP_404_NOT_FOUND)
             
@@ -2130,7 +2110,7 @@ class HandlePolicyByApplicant(APIView):
             "insurance": current_insuarance,
             "cover_type": user_policy['cover_type'],
             "risk_name": user_policy['risk_name'],
-            "age": user_policy['age'],
+            # "age": user_policy['age'],
             "policy_number": self.generate_policy_number(),
             "total_amount": user_policy['new_total_premium'],
             "start_date": user_policy['cover_start_date'],
@@ -2157,7 +2137,77 @@ class HandlePolicyByApplicant(APIView):
         print(f"Date {new_date}")
         return new_date
 
-   
+
+# Organisation GET policy---------------------------------------------------------------------------------------
+class OrganisationGetPolicy(APIView):
+    def get(self, request):
+        try:
+            user= get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            current_organisation= get_organisation_from_user(user)
+            if not current_organisation:
+                return Response({'error': 'Organisation not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            insuarances= self.get_all_insuarances_from_organisation(current_organisation)
+
+            """
+            [
+                {
+                    'id': 1,
+                    'organisation': {
+                        'id': 2,
+                        'user': {
+                            'id': 3,
+                            'first_name': '',
+                            'last_name': '',
+                            'email': 'dmmuchoki7@gmail.com',
+                            'role': 'ORGANISATION'
+                        },
+                    'company_name': '',
+                    'phone_number': '',
+                    'created_at': '2025-02-20T15:59:02.161213+03:00',
+                    'updated_at': '2025-02-20T15:59:02.166369+03:00'
+                    },
+                    'company_name': 'ICI Insure',
+                    'insurance_image': None,
+                    'title': 'Third Party',
+                    'type': 'Third Party',
+                    'description': None,
+                    'created_at': None,
+                    'updated_at': None
+                },
+            ]
+            """
+
+            policies=[]
+            for ins in insuarances:
+                all_policy= Policy.objects.filter(insurance=ins['id'])
+                if not all_policy:
+                    continue
+                policies.append(all_policy)
+
+            print(policies)
+
+            serializer= PolicySerializer(policies, many=True)
+            return Response(serializer.data)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def get_all_insuarances_from_organisation(self, organisation):
+        insuarances= Insurance.objects.filter(organisation=organisation)
+        if not insuarances:
+            return None
+        return InsuranceSerializer(insuarances, many=True).data
+
+    def get_insuarance_from_policy(self, policy):
+        current_insuarance= Insurance.objects.filter(id=policy.insurance.id).first()
+        if not current_insuarance:
+            return None
+        return current_insuarance
+        
 
 
 # Get all payment from the db-----------------------------------------------------------------------------------
