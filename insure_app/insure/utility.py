@@ -17,7 +17,6 @@ from django.template.exceptions import TemplateDoesNotExist
 def send_invoice_pay_failure_email(payment):
     invoice_number = payment.invoice_id
     policy= payment.policy
-    benefits = policy.benefits.all()
     applicant = payment.policy.applicant
     insurance = payment.policy.insurance
 
@@ -27,10 +26,10 @@ def send_invoice_pay_failure_email(payment):
         "applicant_name": applicant.user.get_full_name(),
         # "applicant_email": applicant.user.email,
         # "applicant_phone": applicant.phone_number,
-        # "policy_name": insurance.title,
-        # "policy_number": policy.policy_number,
-        # "policy_type": insurance.type,
-        # "policy_duration": policy.duration,
+        "policy_name": insurance.title,
+        "policy_number": policy.policy_number,
+        "policy_type": insurance.type,
+        "policy_duration": policy.duration,
         "amount": payment.amount,
         # "benefits": benefits,
         # "transaction_id": payment.transaction_id,
@@ -57,11 +56,14 @@ def send_invoice_pay_failure_email(payment):
 
 
 def send_invoice_email(payment):
+    from .models import Benefit
     invoice_number = payment.invoice_id
     policy= payment.policy
-    benefits = policy.benefits.all()
     applicant = payment.policy.applicant
     insurance = payment.policy.insurance
+    benefits = Benefit.objects.filter(insurance=insurance).all()
+    if not benefits:
+        benefits = None
 
     # Render email template
     context = {
@@ -96,6 +98,22 @@ def send_invoice_email(payment):
         recipient_list=[applicant.user.email],
         html_message=html_content,
     )
+
+# Patch policy utility function
+def patch_policy(payment):
+    from .models import Policy
+    policy= payment.policy
+    status= payment.status
+    current_policy= Policy.objects.filter(id= policy.id).first()
+    if not current_policy:
+        return None
+
+    if status == 'PAID':
+        current_policy.status= 'ACTIVE'
+        current_policy.save()
+    elif status == 'FAILED':
+        current_policy.status= 'CANCELLED'
+        current_policy.save()
 
 # import uuid
 def generate_otp():

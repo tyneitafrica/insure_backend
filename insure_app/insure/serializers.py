@@ -39,15 +39,17 @@ class ApplicantSerializer(serializers.ModelSerializer):
 
 
 class OrganisationSerializer(serializers.ModelSerializer):
+    user= UserSerializer(read_only=True)
     class Meta:
         model = Organisation
-        fields = ['id', 'user', 'companyName', 'phoneNumber', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'company_name', 'phone_number', 'created_at', 'updated_at']
 
 
 class InsuranceSerializer(serializers.ModelSerializer):
+    organisation= OrganisationSerializer(read_only=True)
     class Meta:
         model = Insurance
-        fields = ['id', 'organisation', 'company_name','insurance_image','title', 'type', 'description']
+        fields = ['id', 'organisation', 'company_name','insurance_image','title', 'type', 'description','created_at', 'updated_at']
         read_only_fields = ('created_at', 'updated_at')
 
 class VehicleTypeSerializer(serializers.ModelSerializer):
@@ -117,27 +119,15 @@ class HealthInsuranceSerializer(serializers.ModelSerializer):
 
 class PolicySerializer(serializers.ModelSerializer):
     end_date = serializers.DateField(read_only=True)
+    insurance= InsuranceSerializer(read_only=True)
+    applicant= ApplicantSerializer(read_only=True)
 
     class Meta:
         model = Policy
         fields = [
-            'id', 'applicant', 'insurance', 'benefits', 'policy_number', 'start_date', 'end_date', 'duration', 'status', 'created_at', 'updated_at'
+            'id', 'applicant', 'insurance', 'cover_type', 'risk_name', 'age', 'policy_number', 'total_amount' ,'start_date', 'end_date', 'duration', 'status', 'created_at', 'updated_at'
         ]
-
-    def create(self, validated_data):
-        benefits = validated_data.pop('benefits', [])
-        policy = Policy.objects.create(**validated_data)
-        policy.benefits.set(benefits)
-        return policy
-
-    def update(self, instance, validated_data):
-        benefits = validated_data.pop('benefits', None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        if benefits is not None:
-            instance.benefits.set(benefits)
-        instance.save()
-        return instance
+        read_only_fields = ('created_at', 'updated_at')
 
 class HealthInsuranceQuoteRequestSerializer(serializers.ModelSerializer):
     class Meta:
@@ -155,28 +145,28 @@ class HealthLifestyleSerializer(serializers.ModelSerializer):
                   'stress_level','family_history','allergies','mental_health', 'health_insuarance_quote_request',]
         read_only_fields = ('created_at', 'updated_at', 'health_insurance_quote_request')
 
-    def create(self, validated_data):
-        # Handle nested serializer creation for HealthInsuranceQuoteRequest
-        quote_request_data = validated_data.pop('health_insurance_quote_request')
-        quote_request = HealthInsuaranceQuoteRequest.objects.create(**quote_request_data)
-        health_lifestyle = HealthLifestyle.objects.create(
-            health_insurance_quote_request=quote_request,
-            **validated_data
-        )
-        return health_lifestyle
+    # def create(self, validated_data):
+    #     # Handle nested serializer creation for HealthInsuranceQuoteRequest
+    #     quote_request_data = validated_data.pop('health_insurance_quote_request')
+    #     quote_request = HealthInsuaranceQuoteRequest.objects.create(**quote_request_data)
+    #     health_lifestyle = HealthLifestyle.objects.create(
+    #         health_insurance_quote_request=quote_request,
+    #         **validated_data
+    #     )
+    #     return health_lifestyle
 
-    def update(self, instance, validated_data):
-        # Handle nested serializer update for HealthInsuranceQuoteRequest
-        quote_request_data = validated_data.pop('health_insurance_quote_request', None)
-        if quote_request_data:
-            for key, value in quote_request_data.items():
-                setattr(instance.health_insurance_quote_request, key, value)
-            instance.health_insurance_quote_request.save()
+    # def update(self, instance, validated_data):
+    #     # Handle nested serializer update for HealthInsuranceQuoteRequest
+    #     quote_request_data = validated_data.pop('health_insurance_quote_request', None)
+    #     if quote_request_data:
+    #         for key, value in quote_request_data.items():
+    #             setattr(instance.health_insurance_quote_request, key, value)
+    #         instance.health_insurance_quote_request.save()
 
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
-        instance.save()
-        return instance
+    #     for key, value in validated_data.items():
+    #         setattr(instance, key, value)
+    #     instance.save()
+    #     return instance
 
 class BenefitSerializer(serializers.ModelSerializer):
     class Meta:

@@ -83,6 +83,14 @@ WSGI_APPLICATION = 'insure_app.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'insure_db.sqlite3',
+#     }
+# }
+
+# postgres database 
 
 # DATABASES = {
 #     'default': {
@@ -147,7 +155,9 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'kyc_images')
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.RawMediaCloudinaryStorage"
+
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'kyc_images')
 
 
 # Default primary key field type
@@ -162,6 +172,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://sandbox.safaricom.co.ke",
     "https://api.safaricom.co.ke",
+    'https://insure-frontend.vercel.app'
 ]
 
 CORS_ALLOW_HEADERS = [
@@ -178,15 +189,16 @@ CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000",  # Replace with your frontend URL
     "https://sandbox.safaricom.co.ke",
     "https://api.safaricom.co.ke",
+    'https://insure-frontend.vercel.app'
     
 ]
 
-# CLOUDINARY_STORAGE = {
-#     "CLOUD_NAME": config("CLOUD_NAME"),
-#     "API_KEY": config("CLOUDINARY_API_KEY"),
-#     "API_SECRET": config("CLOUDINARY_API_SECRET"),
-#     "SECURE": False,  # sqitch it to true to only be used in https environment
-# }
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": config("CLOUD_NAME"),
+    "API_KEY": config("CLOUDINARY_API_KEY"),
+    "API_SECRET": config("CLOUDINARY_API_SECRET"),
+    "SECURE": False,  # sqitch it to true to only be used in https environment
+}
 
 # # handles the email notification
 EMAIL_BACKEND = config("EMAIL_BACKEND")

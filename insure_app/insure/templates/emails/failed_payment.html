@@ -42,6 +42,14 @@
             border-radius: 5px;
             margin-top: 20px;
         }
+        .section {
+            padding: 10px 0;
+        }
+        .section h3 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
         .footer {
             margin-top: 20px;
             text-align: center;
@@ -65,8 +73,32 @@
                     <li>Bank restrictions</li>
                 </ul>
             </p>
+            <div class="section">
+                <h3>Insurance Details</h3>
+                <div class="details">
+                    <p><strong>Policy Name:</strong> {{ policy_name }}</p>
+                    <p><strong>Policy Number:</strong> {{ policy_number }}</p>
+                    <p><strong>Policy Type:</strong> {{ policy_type }}</p>
+                    <p><strong>Duration:</strong> {{ policy_duration }}</p>
+                </div>
+                <div>
+                    <!-- <a href="" class="download-btn">Download Policy</a> -->
+                </div>
+            </div>
             <p>Please try again or use a different payment method.</p>
             <a href="" class="button">Retry Payment</a>
+        </div>
+        <div class="section">
+            <h3>Insurance Details</h3>
+            <div class="details">
+                <p><strong>Policy Name:</strong> {{ policy_name }}</p>
+                <p><strong>Policy Number:</strong> {{ policy_number }}</p>
+                <p><strong>Policy Type:</strong> {{ policy_type }}</p>
+                <p><strong>Duration:</strong> {{ policy_duration }}</p>
+            </div>
+            <div>
+                <!-- <a href="" class="download-btn">Download Policy</a> -->
+            </div>
         </div>
         <div class="footer">
             <p><strong>{{ company_name }}</strong></p>

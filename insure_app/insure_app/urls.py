@@ -56,6 +56,7 @@ urlpatterns = [
     path("api/v1.0/motorinsurance/filter/",FilterMotorInsurance.as_view(), name="filter motor insurance"),  #will handle the filter for getting quotes
     path("api/v1.0/motorinsurance/<int:id>/", EditMotorInsurance.as_view(), name="edit motor insurance"), #will handle the patch and delete of motor insurance
     path("api/v1.0/motorinsurance/optionalcharges/", Additionalcharge.as_view(), name="add optional charges motor insurance"), #will handle the patch and delete of motor insurance
+    path("api/v1.0/motorinsurance/filter/<int:id>/",FilterInsuranceId.as_view(), name="filter insurance by id"),
 
 #    upload marine section 
     path("api/v1.0/applicant/marine_session/", CreateMarineInsuranceSession.as_view(), name="create insurance session"),
@@ -70,7 +71,11 @@ urlpatterns = [
 
     # Payment urls----------------------------------------------------------------------------
     path("api/v1.0/policy-payments/", PaymentView.as_view(), name="policy payments"), #GET all applicant payments
-    path("api/v1.0/mpesa-payment/", MpesaPaymentView.as_view(), name="mpesa payment"), #POST
+    path("api/v1.0/policy/", HandlePolicyByApplicant.as_view(), name="applicant policy"),
+    # path("api/v1.0/policy/<int:id>/", HandlePolicyByID.as_view(), name="applicant policy"),
+    path("api/v1.0/org-policy/", OrganisationGetPolicy.as_view(), name="applicant policy"),
+
+    path("api/v1.0/mpesa-payment/<int:id>/", MpesaPaymentView.as_view(), name="mpesa payment"), #POST
     path("api/safaricom-callback/", HandleSafCallbackView.as_view(), name="saf payment callback"),
     # path("api/v1.0/card-payment/", CardPaymentView.as_view(), name="card payment"),#POST
 
