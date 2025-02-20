@@ -7,3 +7,5 @@ insure_db.sqlite3
 tests
 env
 *.db
+
+kyc_images/

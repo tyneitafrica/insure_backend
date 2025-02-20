@@ -17,12 +17,16 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = config('DEBUG', default=False, cast=bool)
 
+# is_production = config('ENVIRONMENT', default="development") == 'production'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-9+sp99s#p1#=5wyv)0&po206l8kw=ixjzcq)($%$&_!*ffqn7p'
+# SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -94,12 +98,19 @@ WSGI_APPLICATION = 'insure_app.wsgi.application'
 
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'insure_db.sqlite3',
+#         'ENGINE': 'django.db.backends.postgresql' if is_production else 'django.db.backends.sqlite3',
+#         'NAME': config('DB_NAME') if is_production else BASE_DIR / 'insure_db.sqlite3',
+#         'USER': config('DB_USER') if is_production else '',
+#         'PASSWORD': config('DB_PASSWORD') if is_production else '',
+#         'HOST': config('DB_HOST') if is_production else '',
+#         'PORT': config('DB_PORT') if is_production else '',
+#         'OPTIONS': {
+#             'sslmode': 'require',
+#         } if is_production else {},
 #     }
 # }
 
-# postgres database 
+# # postgres database 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',

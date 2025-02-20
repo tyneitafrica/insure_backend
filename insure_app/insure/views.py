@@ -39,7 +39,7 @@ SECRET_KEY = config("SECRET")
 def get_user_from_token(request):
     token = request.COOKIES.get('jwt')
     if not token:
-        raise AuthenticationFailed("Token not in request header")
+        raise AuthenticationFailed("User not logged in")
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
@@ -54,17 +54,20 @@ def get_user_from_token(request):
 
     return user
 
-def get_user_from_cookie(cookie):
+def get_motor_details(request):
     signer = Signer()
+    cookie = request.COOKIES.get('user_motor_details')
     
     if not cookie:
-        raise AuthenticationFailed('User ID not found in cookies')
+        raise AuthenticationFailed('Motor details not found in cookies')
 
     try:
         user_motor_details = signer.unsign(cookie)
-        return user_motor_details
+        return json.loads(user_motor_details)  # Convert string to dictionary
     except BadSignature:
         raise AuthenticationFailed('Invalid cookie signature')
+    except json.JSONDecodeError:
+        raise AuthenticationFailed('Failed to parse motor details JSON')
 
 def get_organisation_from_user(user):
     organisation = Organisation.objects.filter(user=user).first()
@@ -142,6 +145,7 @@ class MeView(APIView):
         user = get_user_from_token(request)
         serializer = UserSerializer(user)
         return Response(serializer.data)
+    
 # -----------------------------------------APPLICANT LOGIN ----------------------------------#
 class LoginApplicant(APIView):
 
@@ -175,8 +179,8 @@ class LoginApplicant(APIView):
                 key='jwt',
                 value=token,
                 httponly=True,
-                # samesite='None',
-                secure=False,   #to be switched to true in production
+                samesite='None',
+                secure=True,   #to be switched to true in production
                 max_age=3600, 
             )
             response.data = {
@@ -378,8 +382,20 @@ class CreateMotorInsuranceSession(APIView):
             return response
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    @method_decorator(csrf_exempt)
+    def get(self, request, *args, **kwargs):
+        try:
+            motor_details = get_motor_details(request)
+            return Response(motor_details, status=status.HTTP_200_OK)
+        except AuthenticationFailed as e:
+            return Response({"error": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        except json.JSONDecodeError:
+            return Response({"error": "Invalid JSON format in motor details"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+      
 
 # ----------------------------------------------------------------- GET QUOTE for personal Insurance----------------------------------------------------#
 
@@ -885,7 +901,8 @@ class FilterMotorInsurance(APIView):
             vehicle_age = user_details.get('vehicle_age',3)  # e.g., 3 years
             age = user_details.get('age',23)  # e.g., 25 years
             print(age)
-            # experience = user_details.get('experience',1) # e.g., 2 years            
+            experience = user_details.get('experience',1) # e.g., 2 years            
+            # experience = user_details.get('experience',1) # e.g., 2 years
             # experience = int(user_details.get('experience',1))  # e.g., 2 years
             # print(experience)
             insurance_type = "Motor"  # We're filtering for motor insurance
@@ -1040,7 +1057,6 @@ class FilterMotorInsurance(APIView):
                 samesite='None',
                 secure=True,
                 max_age=3600, #expire 1hr
-
             )
 
             return response
@@ -1102,7 +1118,6 @@ class FilterMotorInsurance(APIView):
             # print(f"Total Excess Charges_well: {total_excess_charges}")
             # print (premium)
 
-
             # Update the total premium
             total_premium = float(premium + total_excess_charges)
 
@@ -1136,6 +1151,7 @@ class FilterMotorInsurance(APIView):
 
             response.set_cookie(
                 key="user_motor_details",
+                # key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
@@ -1213,7 +1229,6 @@ class FilterInsuranceId(APIView):
             user_details['new_total_premium'] = total_premium
             user_details['new_excess_charges'] = new_excess_charges
 
-
             # create the new cookie with updated data
             user_details_json = json.dumps(user_details)
             print(user_details_json)
@@ -1245,6 +1260,14 @@ class FilterInsuranceId(APIView):
 
             response.set_cookie(
                 key="user_motor_details",
+                value=signed_data,
+                httponly=True,
+                samesite='None',
+                secure=True,
+                max_age=3600, #expire 1hr
+            )
+            response.set_cookie(
+                key="user_motor_details_2",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
@@ -2058,8 +2081,9 @@ class HandlePolicyByApplicant(APIView):
             return Response({'error': 'Policy data not found'}, status=status.HTTP_404_NOT_FOUND)
         
         sign= Signer()
-        user_policy_json= sign.unsign_object(policy_data)
+        user_policy_json= sign.unsign(policy_data)
         user_policy= json.loads(user_policy_json)
+  
 
         # user_policy= request.data
         # print(user_policy)
@@ -2102,6 +2126,7 @@ class HandlePolicyByApplicant(APIView):
         "insurance_id": 1
         }
         """
+        print(user_policy)
         current_insuarance= Insurance.objects.filter(id=user_policy['insurance_id']).first()
         if not current_insuarance:
             return Response({'error': 'insuarance not found'}, status=status.HTTP_404_NOT_FOUND)
