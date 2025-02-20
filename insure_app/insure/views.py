@@ -1118,6 +1118,7 @@ class FilterMotorInsurance(APIView):
 
             response.set_cookie(
                 key="user_details_with_policies_patch",
+                # key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
