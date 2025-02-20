@@ -1265,6 +1265,14 @@ class FilterInsuranceId(APIView):
                 secure=True,
                 max_age=3600, #expire 1hr
             )
+            response.set_cookie(
+                key="user_motor_details_2",
+                value=signed_data,
+                httponly=True,
+                samesite='None',
+                secure=True,
+                max_age=3600, #expire 1hr
+            )
             return response
 
         except Exception as e:
@@ -2072,8 +2080,9 @@ class HandlePolicyByApplicant(APIView):
             return Response({'error': 'Policy data not found'}, status=status.HTTP_404_NOT_FOUND)
         
         sign= Signer()
-        user_policy_json= sign.unsign_object(policy_data)
+        user_policy_json= sign.unsign(policy_data)
         user_policy= json.loads(user_policy_json)
+  
 
         # user_policy= request.data
         # print(user_policy)
@@ -2116,6 +2125,7 @@ class HandlePolicyByApplicant(APIView):
         "insurance_id": 1
         }
         """
+        print(user_policy)
         current_insuarance= Insurance.objects.filter(id=user_policy['insurance_id']).first()
         if not current_insuarance:
             return Response({'error': 'insuarance not found'}, status=status.HTTP_404_NOT_FOUND)
