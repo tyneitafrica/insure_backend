@@ -92,13 +92,24 @@ class SignupUser(APIView):
         role = User.Role.APPLICANT
 
         try:
-            if not email or not password:
-                return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+            # Check if required fields are provided
+            if not email or not password or not id_no or not phone_number:
+                return Response({"error": "Email, password, ID number, and phone number are required"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Check if user already exists
             existing_user = User.objects.filter(email=email).first()
             if existing_user:
                 return Response({"error": "User already registered, Please login."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if ID number already exists in the Applicant model
+            existing_applicant = Applicant.objects.filter(id_no=id_no).first()
+            if existing_applicant:
+                return Response({"error": "ID number already registered."}, status=status.HTTP_400_BAD_REQUEST)
+                
+
+            existing_phone = Applicant.objects.filter(phone_number=phone_number).first()
+            if existing_phone:
+                return Response({"error": "Phone number already registered."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Create new user if not found
             serializer = UserSerializer(data={**request.data, "role": role})
@@ -164,8 +175,8 @@ class LoginApplicant(APIView):
                 key='jwt',
                 value=token,
                 httponly=True,
-                samesite='None',
-                secure=True,   #to be switched to true in production
+                # samesite='None',
+                secure=False,   #to be switched to true in production
                 max_age=3600, 
             )
             response.data = {
@@ -198,7 +209,7 @@ class SignupOrganisation(APIView):
         # phoneNumber= request.data.get('phone_number')
         role = User.Role.ORGANISATION
 
-        # check if the user is already registered
+        # check if the user is alreapppkkdy registered
         try:
             if User.objects.filter(email=email).exists():
                 return Response({'error': 'A user with this Email is already registered'}, status=status.HTTP_400_BAD_REQUEST)
@@ -963,10 +974,10 @@ class FilterMotorInsurance(APIView):
 
                     # Calculate base premium
                     x = vehicle_value * (rate_range.rate / 100)
-                    # print("x", x)
+                    print("x", x)
 
                     base_premium  = float(max(x, rate_range.min_sum_assured))
-                    # print("base_premium", base_premium)
+                    print("base_premium", base_premium)
                     
                     # Retrieve additional charges
                     additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance)
@@ -1068,6 +1079,7 @@ class FilterMotorInsurance(APIView):
                 return Response({'error': 'Insurance policy not found'}, status=status.HTTP_404_NOT_FOUND)
 
             total_excess_charges = 0
+            excess_charges_list = []
             for excess_charge_id in selected_excess_charges:
                 try:
                     excess_charge = ExcessCharges.objects.get(id=excess_charge_id, motor_insurance=insurance)
@@ -1079,6 +1091,10 @@ class FilterMotorInsurance(APIView):
                     )
                     # print(f"Excess Charge ID: {excess_amount}")
                     total_excess_charges += int(excess_amount)
+
+                    excess_charges_list.append(excess_charge)
+
+                    excess_serializer = ExcessChargesSerializer(excess_charges_list, many=True)
                 except ExcessCharges.DoesNotExist:
                     print(f"Excess charge with ID {excess_charge_id} not found for this insurance policy")
                     continue
@@ -1094,10 +1110,11 @@ class FilterMotorInsurance(APIView):
             user_details['base_premium'] = premium
             user_details['new_excess_charges'] = total_excess_charges
             user_details['new_total_premium'] = total_premium
+            user_details['excess'] =  excess_serializer.data if excess_serializer else None
 
             # create the new cookie with updated data
             user_details_json = json.dumps(user_details)
-            print(user_details_json)
+            # print(user_details_json)
             
             sign = Signer()
             signed_data = sign.sign(user_details_json)
@@ -1112,6 +1129,7 @@ class FilterMotorInsurance(APIView):
                     'base_premium': premium,
                     'excess_charges': total_excess_charges,
                     'total_premium': total_premium,
+                    'excess': excess_serializer.data if excess_serializer else None,
                 }
         
             },status=status.HTTP_200_OK)
@@ -1151,7 +1169,7 @@ class FilterInsuranceId(APIView):
             
             # Check if the user has already added benefits (via PATCH)
             new_total_premium = user_details.get('new_total_premium')
-            new_excess_charges = user_details.get('new_excess_charges', 0)            # Retrieve the specific insurance policy by ID
+            new_excess_charges = user_details.get('new_excess_charges')            # Retrieve the specific insurance policy by ID
             
             try:
                 insurance = MotorInsurance.objects.get(id=id)
