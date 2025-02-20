@@ -34,6 +34,15 @@ API_KEY = config('API_KEY')
 
 ALLOWED_HOSTS = ['*']
 
+# Set session expiry for admin users
+SESSION_COOKIE_AGE = 3600  # Log out after 1 hr of inactivity (
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Log out when the browser closes
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_NAME = 'cart_items'
+SESSION_COOKIE_SAMESITE = 'None'  # For cross-site cookies
+CSRF_COOKIE_SAMESITE = 'None'  # For CSRF cookies if using CSRF protection
+CSRF_COOKIE_SECURE = True  # Ensure CSRF cookie is sent over HTTPS
+
 
 # Application definition
 
