@@ -12,7 +12,7 @@ from datetime import date
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
-from .utility import send_invoice_email, send_invoice_pay_failure_email
+from .utility import send_invoice_email, send_invoice_pay_failure_email, patch_policy
 from cloudinary_storage.storage import RawMediaCloudinaryStorage
 
 
@@ -366,10 +366,12 @@ def send_invoice_on_success(sender, instance, **kwargs):
     print(f"Payment status updated: {instance.status}")
     if instance.status == "PAID":
         print(f"Sending invoice for payment ID: {instance.id}")
-        send_invoice_email(instance)
+        patch_policy(instance)
+        send_invoice_email(instance)        
 
     elif instance.status == "FAILED":
         print("Payment status is not 'PAID'. No invoice sent.")
+        patch_policy(instance)
         send_invoice_pay_failure_email(instance)
 
 
