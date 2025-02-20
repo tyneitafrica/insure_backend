@@ -35,10 +35,7 @@ urlpatterns = [
 
 
 
-    path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"),   
-
-    
-
+    path("api/v1.0/applicant/motor_session/", CreateMotorInsuranceSession.as_view(), name="create insurance session"), 
     # Health
     path("api/v1.0/health-insuarance-session/", HealthInsuaranceSession.as_view(), name="create health insurance session"),
     path("api/v1.0/get-auth-quotes/", GetHealthInsuranceQuote.as_view(), name="get user quotes"),
@@ -74,7 +71,5 @@ urlpatterns = [
     path("api/v1.0/mpesa-payment/<int:id>/", MpesaPaymentView.as_view(), name="mpesa payment"), #POST
     path("api/safaricom-callback/", HandleSafCallbackView.as_view(), name="saf payment callback"),
     # path("api/v1.0/card-payment/", CardPaymentView.as_view(), name="card payment"),#POST
-
-
 
 ]

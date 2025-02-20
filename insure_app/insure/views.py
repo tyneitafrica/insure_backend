@@ -39,7 +39,7 @@ SECRET_KEY = config("SECRET")
 def get_user_from_token(request):
     token = request.COOKIES.get('jwt')
     if not token:
-        raise AuthenticationFailed("Token not in request header")
+        raise AuthenticationFailed("User not logged in")
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
@@ -54,17 +54,20 @@ def get_user_from_token(request):
 
     return user
 
-def get_user_from_cookie(cookie):
+def get_motor_details(request):
     signer = Signer()
+    cookie = request.COOKIES.get('user_motor_details')
     
     if not cookie:
-        raise AuthenticationFailed('User ID not found in cookies')
+        raise AuthenticationFailed('Motor details not found in cookies')
 
     try:
         user_motor_details = signer.unsign(cookie)
-        return user_motor_details
+        return json.loads(user_motor_details)  # Convert string to dictionary
     except BadSignature:
         raise AuthenticationFailed('Invalid cookie signature')
+    except json.JSONDecodeError:
+        raise AuthenticationFailed('Failed to parse motor details JSON')
 
 def get_organisation_from_user(user):
     organisation = Organisation.objects.filter(user=user).first()
@@ -142,6 +145,7 @@ class MeView(APIView):
         user = get_user_from_token(request)
         serializer = UserSerializer(user)
         return Response(serializer.data)
+    
 # -----------------------------------------APPLICANT LOGIN ----------------------------------#
 class LoginApplicant(APIView):
 
@@ -175,8 +179,8 @@ class LoginApplicant(APIView):
                 key='jwt',
                 value=token,
                 httponly=True,
-                # samesite='None',
-                secure=False,   #to be switched to true in production
+                samesite='None',
+                secure=True,   #to be switched to true in production
                 max_age=3600, 
             )
             response.data = {
@@ -378,8 +382,20 @@ class CreateMotorInsuranceSession(APIView):
             return response
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    @method_decorator(csrf_exempt)
+    def get(self, request, *args, **kwargs):
+        try:
+            motor_details = get_motor_details(request)
+            return Response(motor_details, status=status.HTTP_200_OK)
+        except AuthenticationFailed as e:
+            return Response({"error": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        except json.JSONDecodeError:
+            return Response({"error": "Invalid JSON format in motor details"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+      
 
 # ----------------------------------------------------------------- GET QUOTE for personal Insurance----------------------------------------------------#
 
@@ -1035,13 +1051,12 @@ class FilterMotorInsurance(APIView):
             # print(response)
 
             response.set_cookie(
-                key="user_details_with_policies",
+                key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
                 secure=True,
                 max_age=3600, #expire 1hr
-
             )
 
             return response
@@ -1052,7 +1067,7 @@ class FilterMotorInsurance(APIView):
     def patch(self, request):
         try:
             # Extract data from the request
-            signed_data = request.COOKIES.get('user_details_with_policies')  # Retrieves the user data previously stored in the cookie
+            signed_data = request.COOKIES.get('user_motor_details')  # Retrieves the user data previously stored in the cookie
             if not signed_data:
                 return Response({'error': 'No session data found in cookies here '}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -1135,7 +1150,7 @@ class FilterMotorInsurance(APIView):
             },status=status.HTTP_200_OK)
 
             response.set_cookie(
-                key="user_details_with_policies_patch",
+                key="user_motor_details",
                 # key="user_motor_details",
                 value=signed_data,
                 httponly=True,
@@ -1153,7 +1168,7 @@ class FilterInsuranceId(APIView):
     def get(self, request, id):
         try:
             # Retrieve and decode the cookie
-            signed_data = request.COOKIES.get('user_details_with_policies_patch')
+            signed_data = request.COOKIES.get('user_motor_details')
             if not signed_data:
                 return Response({'error': 'No session data found in cookies'}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -1213,7 +1228,6 @@ class FilterInsuranceId(APIView):
             user_details['new_total_premium'] = total_premium
             user_details['new_excess_charges'] = new_excess_charges
 
-
             # create the new cookie with updated data
             user_details_json = json.dumps(user_details)
             print(user_details_json)
@@ -1244,7 +1258,7 @@ class FilterInsuranceId(APIView):
             }, status=status.HTTP_200_OK)
 
             response.set_cookie(
-                key="user_motor_details_policy",
+                key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
@@ -2053,7 +2067,7 @@ class HandlePolicyByApplicant(APIView):
         if not current_applicant:
             return Response({'error': 'Applicant not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        policy_data= request.COOKIES.get('user_details_with_policies')
+        policy_data= request.COOKIES.get('user_motor_details')
         if not policy_data:
             return Response({'error': 'Policy data not found'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -2066,7 +2080,7 @@ class HandlePolicyByApplicant(APIView):
             "first_name": "John",
             "last_name": "Doe",
             "email": "johndoe@example.com",
-            "id_no": null,
+            "id_no": null,            
             "occupation": null,
             "gender": null,
             "phoneNumber": null,
