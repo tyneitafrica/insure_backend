@@ -1002,10 +1002,10 @@ class FilterMotorInsurance(APIView):
 
                     # Calculate base premium
                     x = vehicle_value * (rate_range.rate / 100)
-                    print("x", x)
+                    # print("x", x)
 
                     base_premium  = float(max(x, rate_range.min_sum_assured))
-                    print("base_premium", base_premium)
+                    # print("base_premium", base_premium)
                     
                     # Retrieve additional charges
                     additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance)
@@ -1260,7 +1260,7 @@ class FilterInsuranceId(APIView):
 
             # Create the new cookie with updated data
             user_details_json = json.dumps(user_details)
-            # print(user_details_json)
+            print(user_details_json)
             
             sign = Signer()
             signed_data = sign.sign(user_details_json)
