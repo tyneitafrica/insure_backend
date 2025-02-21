@@ -705,7 +705,7 @@ class UploadMotorInsurance(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+# step2
 class MotorInsuranceDetails(APIView):
     def post(self, request):
         data = request.data
@@ -744,19 +744,31 @@ class MotorInsuranceDetails(APIView):
                         vehicle_type=vehicle_type_obj,
                         risk_name=risk_name
                     )
-                    RateRange.objects.create(
+
+                    # Handle weight categories (ManyToMany relationship)
+                    weight_categories = rate_data.get("weight_category", [])
+                    if isinstance(weight_categories, str):
+                        weight_categories = [weight_categories]  # Convert string to list
+
+                    weight_category_objs = []
+                    for weight in weight_categories:
+                        weight_obj, _ = WeightCategory.objects.get_or_create(weight_category=weight)
+                        weight_category_objs.append(weight_obj)
+
+                    # Create the RateRange object
+                    rate_range_obj = RateRange.objects.create(
                         motor_insurance=upload,
                         risk_type=risk_type_obj,
-                        min_value=rate_data.get("min_value"),  # e.g., 2,000,000
-                        max_value=rate_data.get("max_value"),  # e.g., 4,000,000
-                        max_car_age=rate_data.get("max_age", 5),  # e.g., below 5 years
-                        min_sum_assured=rate_data.get("min_premium"),  # e.g., 40,000
-                        usage_category=rate_data.get("usage_category"),  # e.g., Fleet, Standard
-                        weight_category=rate_data.get("weight_category"),  # e.g., Up to 3 tons
-                        rate=rate_data.get("rate"),  # e.g., 4.0
+                        min_value=rate_data.get("min_value"),
+                        max_value=rate_data.get("max_value"),
+                        max_car_age=rate_data.get("max_age", 5),
+                        min_sum_assured=rate_data.get("min_premium"),
+                        usage_category=rate_data.get("usage_category"),
+                        rate=rate_data.get("rate"),
                     )
 
-                    print(risk_type_obj)
+                    # Assign weight categories to RateRange using set()
+                    rate_range_obj.weight_category.set(weight_category_objs)
 
                 # Create excess charges
                 for excess_data in excess_charges:
