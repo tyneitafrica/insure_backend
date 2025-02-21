@@ -988,8 +988,8 @@ class FilterMotorInsurance(APIView):
                         # print("risk_name_db",rate_range.risk_type.risk_name)
                     
 
-                        if (rate_range.usage_category != usage_category or
-                            rate_range.weight_category != weight_category or
+                        if (rate_range.usage_category != usage_category or not
+                            rate_range.weight_category.filter(weight_category=weight_category).exists() or
                             rate_range.risk_type.risk_name != risk_name  
                             ):
                             continue  # Skip if usage or weight category doesn't match
