@@ -132,7 +132,7 @@ class Insurance(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.title} {self.type} {self.description} {self.organisation}"
+        return f"{self.title} {self.type} {self.description} {self.organisation} {self.insurance_image.url}"
 
 
 
