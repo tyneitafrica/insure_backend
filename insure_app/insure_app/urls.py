@@ -73,7 +73,8 @@ urlpatterns = [
     path("api/v1.0/policy-payments/", PaymentView.as_view(), name="policy payments"), #GET all applicant payments
     path("api/v1.0/policy/", HandlePolicyByApplicant.as_view(), name="applicant policy"),
     # path("api/v1.0/policy/<int:id>/", HandlePolicyByID.as_view(), name="applicant policy"),
-    path("api/v1.0/org-policy/", OrganisationGetPolicy.as_view(), name="applicant policy"),
+    path("api/v1.0/org-policy/", OrganisationGetPolicy.as_view(), name="organisation policy"),
+    path("api/v1.0/org-payments/", OrgnaisationGetPayment.as_view(), name="organisation payments"),
 
     path("api/v1.0/mpesa-payment/<int:id>/", MpesaPaymentView.as_view(), name="mpesa payment"), #POST
     path("api/safaricom-callback/", HandleSafCallbackView.as_view(), name="saf payment callback"),
