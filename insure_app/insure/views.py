@@ -2142,74 +2142,67 @@ class HandlePolicyByApplicant(APIView):
 # Organisation GET policy---------------------------------------------------------------------------------------
 class OrganisationGetPolicy(APIView):
     def get(self, request):
+            try:
+                # Get the logged-in user
+                user = get_user_from_token(request)
+                if not user:
+                    return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+                # Get the organisation
+                organisation = get_organisation_from_user(user)
+                if not organisation:
+                    return Response({'error': 'Organisation not found'}, status=status.HTTP_404_NOT_FOUND)
+
+                # Fetch all insurance policies associated with the organisation
+                insurances = Insurance.objects.filter(organisation=organisation)
+                if not insurances.exists():
+                    return Response({'error': 'No insurances found for this organisation'}, status=status.HTTP_404_NOT_FOUND)
+
+                # Fetch all policies associated with these insurances
+                policies = Policy.objects.filter(insurance__in=insurances)
+
+                if not policies.exists():
+                    return Response({'message': 'No policies found for this organisation'}, status=status.HTTP_200_OK)
+
+                # Serialize and return the data
+                serializer = PolicySerializer(policies, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class OrgnaisationGetPayment(APIView):
+    def get(self, request):
         try:
             user= get_user_from_token(request)
             if not user:
                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            current_organisation= get_organisation_from_user(user)
-            if not current_organisation:
+            # Get organisation
+            organisation = get_organisation_from_user(user)
+            if not organisation:
                 return Response({'error': 'Organisation not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            insuarances= self.get_all_insuarances_from_organisation(current_organisation)
+            # Fetch all insurance policies associated with the organisation
+            insurances = Insurance.objects.filter(organisation=organisation)
+            if not insurances.exists():
+                return Response({'error': 'No insurances found for this organisation'}, status=status.HTTP_404_NOT_FOUND)
 
-            """
-            [
-                {
-                    'id': 1,
-                    'organisation': {
-                        'id': 2,
-                        'user': {
-                            'id': 3,
-                            'first_name': '',
-                            'last_name': '',
-                            'email': 'dmmuchoki7@gmail.com',
-                            'role': 'ORGANISATION'
-                        },
-                    'company_name': '',
-                    'phone_number': '',
-                    'created_at': '2025-02-20T15:59:02.161213+03:00',
-                    'updated_at': '2025-02-20T15:59:02.166369+03:00'
-                    },
-                    'company_name': 'ICI Insure',
-                    'insurance_image': None,
-                    'title': 'Third Party',
-                    'type': 'Third Party',
-                    'description': None,
-                    'created_at': None,
-                    'updated_at': None
-                },
-            ]
-            """
+            # Fetch all policies associated with these insurances
+            policies = Policy.objects.filter(insurance__in=insurances)
+            if not policies.exists():
+                return Response({'message': 'No policies found for this organisation'}, status=status.HTTP_200_OK)
 
-            policies=[]
-            for ins in insuarances:
-                all_policy= Policy.objects.filter(insurance=ins['id'])
-                if not all_policy:
-                    continue
-                policies.append(all_policy)
+            # Fetch all payments
+            payments= Payment.objects.filter(policy__in=policies)
+            if not payments:
+                return Response({'message': 'No payments found for this organisation'}, status=status.HTTP_200_OK)
 
-            print(policies)
-
-            serializer= PolicySerializer(policies, many=True)
-            return Response(serializer.data)
+            serializer= PaymentSerializer(payments, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def get_all_insuarances_from_organisation(self, organisation):
-        insuarances= Insurance.objects.filter(organisation=organisation)
-        if not insuarances:
-            return None
-        return InsuranceSerializer(insuarances, many=True).data
-
-    def get_insuarance_from_policy(self, policy):
-        current_insuarance= Insurance.objects.filter(id=policy.insurance.id).first()
-        if not current_insuarance:
-            return None
-        return current_insuarance
-        
-
 
 # Get all payment from the db-----------------------------------------------------------------------------------
 class PaymentView(APIView):
