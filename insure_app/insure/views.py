@@ -1076,11 +1076,13 @@ class FilterMotorInsurance(APIView):
             user_details_json = sign.unsign(signed_data)
             user_details = json.loads(user_details_json)
             
-            data = request.data
-            
+            data = request.data  
             insurance_id = data.get('insurance_id')
+            # print(insurance_id)
             selected_excess_charges = data.get('selected_excess_charges', [])
+            # print(selected_excess_charges)
             vehicle_value = user_details.get('vehicle_value')  # e.g., 4,500,000
+            # print(vehicle_value)
             premium = data.get('total_premium')
 
             # print(selected_excess_charges)
@@ -1090,6 +1092,7 @@ class FilterMotorInsurance(APIView):
             # Retrieve the insurance policy
             try:
                 insurance = MotorInsurance.objects.get(id=insurance_id)
+                # print(insurance.id)
             except MotorInsurance.DoesNotExist:
                 return Response({'error': 'Insurance policy not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1122,6 +1125,7 @@ class FilterMotorInsurance(APIView):
             total_premium = float(premium + total_excess_charges)
 
             # update the cookie if user chooses excesses
+            user_details['insurance_id'] = insurance.id
             user_details['base_premium'] = premium
             user_details['new_excess_charges'] = total_excess_charges
             user_details['new_total_premium'] = total_premium
@@ -1151,7 +1155,6 @@ class FilterMotorInsurance(APIView):
 
             response.set_cookie(
                 key="user_motor_details",
-                # key="user_motor_details",
                 value=signed_data,
                 httponly=True,
                 samesite='None',
@@ -1182,10 +1185,7 @@ class FilterInsuranceId(APIView):
             age = int(user_details.get('age', 23))
             # experience = int(user_details.get('experience', 1))  # Added experience
             
-            # Check if the user has already added benefits (via PATCH)
-            new_total_premium = user_details.get('new_total_premium')
-            new_excess_charges = user_details.get('new_excess_charges')            # Retrieve the specific insurance policy by ID
-            
+            # Retrieve the specific insurance policy by ID
             try:
                 insurance = MotorInsurance.objects.get(id=id)
             except MotorInsurance.DoesNotExist:
@@ -1210,29 +1210,44 @@ class FilterInsuranceId(APIView):
             under_21_charge = additional_charges.under_21_age_charge if age < 21 else 0
             # under_1_year_charge = additional_charges.under_1_year_experience_charge if experience < 1 else 0
             
+            # Check if the user has already added benefits (via PATCH)
+            new_total_premium = user_details.get('new_total_premium')
+            new_excess_charges = user_details.get('new_excess_charges')
+            insurance_id = user_details.get('insurance_id')
+            # print("cookie_data",{
+            #     'insurance_id': insurance_id,
+            #     'new_total_premium': new_total_premium,
+            #     'new_excess_charges': new_excess_charges
+            # })
+            # print("id",id)
+            
+            # Reset excess charges and total premium if the policy hasn't been patched
+            if insurance_id != id:
+                new_total_premium = None
+                new_excess_charges = None
+            
             if new_total_premium:
                 total_premium = float(new_total_premium)
-            
             else:
                 total_premium = float(base_premium + under_21_charge)
             
-            
-            # exess_charges that are in relation to motor insurance
+            # Excess charges that are in relation to motor insurance
             excess_charges = ExcessCharges.objects.filter(motor_insurance=insurance)
             optional_serializer = ExcessChargesSerializer(excess_charges, many=True) if excess_charges.exists() else None
             
-            # Calculate total premium
-
-
-            # update the cookie if user chooses excesses
+            # Update the cookie with the new insurance ID and reset values if necessary
             user_details['insurance_id'] = id
             user_details['new_total_premium'] = total_premium
             user_details['new_excess_charges'] = new_excess_charges
 
-            # create the new cookie with updated data
+            # print("new_cookie_data",{
+            #     'insurance_id': user_details['insurance_id'],
+            #     'new_total_premium': user_details['new_total_premium'],
+            #     'new_excess_charges': user_details['new_excess_charges']
+            # })
+
+            # Create the new cookie with updated data
             user_details_json = json.dumps(user_details)
-            print(user_details_json)
-            
             # print(user_details_json)
             
             sign = Signer()
@@ -1253,7 +1268,7 @@ class FilterInsuranceId(APIView):
                     'under_21_charge': under_21_charge,
                     # 'under_1_year_charge': under_1_year_charge,
                     'total_premium': total_premium,
-                    'excess_charges': new_excess_charges if  new_excess_charges else None,
+                    'excess_charges': new_excess_charges if new_excess_charges else None,
                     'excess_benefits': optional_serializer.data if optional_serializer else None,
                 }
             }, status=status.HTTP_200_OK)
@@ -1266,14 +1281,7 @@ class FilterInsuranceId(APIView):
                 secure=True,
                 max_age=3600, #expire 1hr
             )
-            response.set_cookie(
-                key="user_motor_details_2",
-                value=signed_data,
-                httponly=True,
-                samesite='None',
-                secure=True,
-                max_age=3600, #expire 1hr
-            )
+
             return response
 
         except Exception as e:
