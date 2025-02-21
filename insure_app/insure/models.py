@@ -132,7 +132,7 @@ class Insurance(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.title} {self.type} {self.description} {self.organisation}"
+        return f"{self.title} {self.type} {self.description} {self.organisation} {self.insurance_image.url}"
 
 
 
@@ -184,6 +184,12 @@ class RiskType(models.Model):
         return f"{self.vehicle_type} {self.risk_name}"
 
 # the rate ranges is associated to a specific risk type and motro insurance cover
+
+class WeightCategory(models.Model):
+    weight_category = models.CharField(max_length=100,null=True,blank=True)
+
+    def __str__(self):
+        return f"{self.weight_category}"
 class RateRange(models.Model):  
     motor_insurance = models.ForeignKey(MotorInsurance, on_delete=models.CASCADE, related_name='rate_ranges')
     risk_type = models.ForeignKey(RiskType,on_delete=models.CASCADE) #to add related name later 
@@ -191,14 +197,7 @@ class RateRange(models.Model):
         ('Fleet', 'Fleet'),
         ('Standard', 'Standard'),
     ])
-    weight_category = models.CharField(max_length=50,null=True,blank=True,choices=[
-        ('Up to 3 tons', 'Up to 3 tons'),
-        ('3 tons – 8 tons', '3 tons – 8 tons'),
-        ('Over 8 tons', 'Over 8 tons'),
-        ('8 tons-20 tons', '8 tons- 20 tons'),
-        ('20 tons -30 tons', '20 tons -30 tons'),
-        ('Prime mover', 'Prime mover'),
-    ])
+    weight_category = models.ManyToManyField(WeightCategory,max_length=50,blank=True)
     max_car_age = models.IntegerField()  # Maximum age threshold (e.g., 5 years)
     min_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Minimum vehicle value for this range
     max_value = models.DecimalField(max_digits=15, decimal_places=2,db_index=True)  # Maximum vehicle value for this range

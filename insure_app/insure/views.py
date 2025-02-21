@@ -705,7 +705,7 @@ class UploadMotorInsurance(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+# step2
 class MotorInsuranceDetails(APIView):
     def post(self, request):
         data = request.data
@@ -744,19 +744,31 @@ class MotorInsuranceDetails(APIView):
                         vehicle_type=vehicle_type_obj,
                         risk_name=risk_name
                     )
-                    RateRange.objects.create(
+
+                    # Handle weight categories (ManyToMany relationship)
+                    weight_categories = rate_data.get("weight_category", [])
+                    if isinstance(weight_categories, str):
+                        weight_categories = [weight_categories]  # Convert string to list
+
+                    weight_category_objs = []
+                    for weight in weight_categories:
+                        weight_obj, _ = WeightCategory.objects.get_or_create(weight_category=weight)
+                        weight_category_objs.append(weight_obj)
+
+                    # Create the RateRange object
+                    rate_range_obj = RateRange.objects.create(
                         motor_insurance=upload,
                         risk_type=risk_type_obj,
-                        min_value=rate_data.get("min_value"),  # e.g., 2,000,000
-                        max_value=rate_data.get("max_value"),  # e.g., 4,000,000
-                        max_car_age=rate_data.get("max_age", 5),  # e.g., below 5 years
-                        min_sum_assured=rate_data.get("min_premium"),  # e.g., 40,000
-                        usage_category=rate_data.get("usage_category"),  # e.g., Fleet, Standard
-                        weight_category=rate_data.get("weight_category"),  # e.g., Up to 3 tons
-                        rate=rate_data.get("rate"),  # e.g., 4.0
+                        min_value=rate_data.get("min_value"),
+                        max_value=rate_data.get("max_value"),
+                        max_car_age=rate_data.get("max_age", 5),
+                        min_sum_assured=rate_data.get("min_premium"),
+                        usage_category=rate_data.get("usage_category"),
+                        rate=rate_data.get("rate"),
                     )
 
-                    print(risk_type_obj)
+                    # Assign weight categories to RateRange using set()
+                    rate_range_obj.weight_category.set(weight_category_objs)
 
                 # Create excess charges
                 for excess_data in excess_charges:
@@ -976,8 +988,8 @@ class FilterMotorInsurance(APIView):
                         # print("risk_name_db",rate_range.risk_type.risk_name)
                     
 
-                        if (rate_range.usage_category != usage_category or
-                            rate_range.weight_category != weight_category or
+                        if (rate_range.usage_category != usage_category or not
+                            rate_range.weight_category.filter(weight_category=weight_category).exists() or
                             rate_range.risk_type.risk_name != risk_name  
                             ):
                             continue  # Skip if usage or weight category doesn't match
@@ -990,10 +1002,10 @@ class FilterMotorInsurance(APIView):
 
                     # Calculate base premium
                     x = vehicle_value * (rate_range.rate / 100)
-                    print("x", x)
+                    # print("x", x)
 
                     base_premium  = float(max(x, rate_range.min_sum_assured))
-                    print("base_premium", base_premium)
+                    # print("base_premium", base_premium)
                     
                     # Retrieve additional charges
                     additional_charges = OptionalExcessCharge.objects.filter(insurance=insurance.insurance)
@@ -1248,7 +1260,7 @@ class FilterInsuranceId(APIView):
 
             # Create the new cookie with updated data
             user_details_json = json.dumps(user_details)
-            # print(user_details_json)
+            print(user_details_json)
             
             sign = Signer()
             signed_data = sign.sign(user_details_json)
@@ -2175,74 +2187,67 @@ class HandlePolicyByApplicant(APIView):
 # Organisation GET policy---------------------------------------------------------------------------------------
 class OrganisationGetPolicy(APIView):
     def get(self, request):
+            try:
+                # Get the logged-in user
+                user = get_user_from_token(request)
+                if not user:
+                    return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+                # Get the organisation
+                organisation = get_organisation_from_user(user)
+                if not organisation:
+                    return Response({'error': 'Organisation not found'}, status=status.HTTP_404_NOT_FOUND)
+
+                # Fetch all insurance policies associated with the organisation
+                insurances = Insurance.objects.filter(organisation=organisation)
+                if not insurances.exists():
+                    return Response({'error': 'No insurances found for this organisation'}, status=status.HTTP_404_NOT_FOUND)
+
+                # Fetch all policies associated with these insurances
+                policies = Policy.objects.filter(insurance__in=insurances)
+
+                if not policies.exists():
+                    return Response({'message': 'No policies found for this organisation'}, status=status.HTTP_200_OK)
+
+                # Serialize and return the data
+                serializer = PolicySerializer(policies, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class OrgnaisationGetPayment(APIView):
+    def get(self, request):
         try:
             user= get_user_from_token(request)
             if not user:
                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            current_organisation= get_organisation_from_user(user)
-            if not current_organisation:
+            # Get organisation
+            organisation = get_organisation_from_user(user)
+            if not organisation:
                 return Response({'error': 'Organisation not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            insuarances= self.get_all_insuarances_from_organisation(current_organisation)
+            # Fetch all insurance policies associated with the organisation
+            insurances = Insurance.objects.filter(organisation=organisation)
+            if not insurances.exists():
+                return Response({'error': 'No insurances found for this organisation'}, status=status.HTTP_404_NOT_FOUND)
 
-            """
-            [
-                {
-                    'id': 1,
-                    'organisation': {
-                        'id': 2,
-                        'user': {
-                            'id': 3,
-                            'first_name': '',
-                            'last_name': '',
-                            'email': 'dmmuchoki7@gmail.com',
-                            'role': 'ORGANISATION'
-                        },
-                    'company_name': '',
-                    'phone_number': '',
-                    'created_at': '2025-02-20T15:59:02.161213+03:00',
-                    'updated_at': '2025-02-20T15:59:02.166369+03:00'
-                    },
-                    'company_name': 'ICI Insure',
-                    'insurance_image': None,
-                    'title': 'Third Party',
-                    'type': 'Third Party',
-                    'description': None,
-                    'created_at': None,
-                    'updated_at': None
-                },
-            ]
-            """
+            # Fetch all policies associated with these insurances
+            policies = Policy.objects.filter(insurance__in=insurances)
+            if not policies.exists():
+                return Response({'message': 'No policies found for this organisation'}, status=status.HTTP_200_OK)
 
-            policies=[]
-            for ins in insuarances:
-                all_policy= Policy.objects.filter(insurance=ins['id'])
-                if not all_policy:
-                    continue
-                policies.append(all_policy)
+            # Fetch all payments
+            payments= Payment.objects.filter(policy__in=policies)
+            if not payments:
+                return Response({'message': 'No payments found for this organisation'}, status=status.HTTP_200_OK)
 
-            print(policies)
-
-            serializer= PolicySerializer(policies, many=True)
-            return Response(serializer.data)
+            serializer= PaymentSerializer(payments, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def get_all_insuarances_from_organisation(self, organisation):
-        insuarances= Insurance.objects.filter(organisation=organisation)
-        if not insuarances:
-            return None
-        return InsuranceSerializer(insuarances, many=True).data
-
-    def get_insuarance_from_policy(self, policy):
-        current_insuarance= Insurance.objects.filter(id=policy.insurance.id).first()
-        if not current_insuarance:
-            return None
-        return current_insuarance
-        
-
 
 # Get all payment from the db-----------------------------------------------------------------------------------
 class PaymentView(APIView):
@@ -2525,3 +2530,13 @@ class HandleSafCallbackView(APIView):
         # except Exception as e:
         #     print(e)
         #     return e
+
+
+class HandlePaymentStatus(APIView):
+    def get(self, request, id):
+        existing_payment= Payment.objects.filter(merchant_request_id=id).first()
+        if not existing_payment:
+            return Response({"error": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer= PaymentSerializer(existing_payment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+         
