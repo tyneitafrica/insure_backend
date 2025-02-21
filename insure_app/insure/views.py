@@ -2518,3 +2518,13 @@ class HandleSafCallbackView(APIView):
         # except Exception as e:
         #     print(e)
         #     return e
+
+
+class HandlePaymentStatus(APIView):
+    def get(self, request, id):
+        existing_payment= Payment.objects.filter(merchant_request_id=id).first()
+        if not existing_payment:
+            return Response({"error": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer= PaymentSerializer(existing_payment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+         
