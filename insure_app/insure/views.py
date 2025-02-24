@@ -1321,21 +1321,86 @@ class EditMotorInsurance(APIView):
             'message': 'MotorInsurance retrieved successfully',
             'data': serializer.data
         }, status=status.HTTP_200_OK)
-
+    
     def patch(self, request, id):
-        motor_insurance = self.get_object(id)
-        if isinstance(motor_insurance, Response):  # If the object was not found
-            return motor_insurance
+        try:
+            motor_insurance = self.get_object(id)
+            if isinstance(motor_insurance, Response):  # If the object was not found
+                return motor_insurance
 
-        # Serialize the instance with the incoming data
-        serializer = MotorInsuranceSerializer(motor_insurance, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
+            # Extract data from the request
+            data = request.data
+
+            # Update the MotorInsurance instance
+            if 'cover_type' in data:
+                motor_insurance.cover_type = data['cover_type']
+                motor_insurance.save()
+
+            # Update or create nested RateRange objects
+            if 'rate_ranges' in data:
+                self.update_rate_ranges(motor_insurance, data['rate_ranges'])
+
+            # Update or create nested ExcessCharges objects
+            if 'excess_charges' in data:
+                self.update_excess_charges(motor_insurance, data['excess_charges'])
+
             return Response({
                 'message': 'MotorInsurance updated successfully',
-                'data': serializer.data
+                'data': {
+                    'id': motor_insurance.id,
+                    'cover_type': motor_insurance.cover_type,
+                    'rate_ranges': list(motor_insurance.rate_ranges.values()),
+                    'excess_charges': list(motor_insurance.excess_charges.values())
+                }
             }, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update_rate_ranges(self, instance, rate_ranges_data):
+        # Get existing rate ranges for the motor insurance
+        existing_rate_ranges = {rate_range.id: rate_range for rate_range in instance.rate_ranges.all()}
+
+        for rate_range_data in rate_ranges_data:
+            rate_range_id = rate_range_data.get('id', None)
+
+            if rate_range_id and rate_range_id in existing_rate_ranges:
+                # Update existing RateRange
+                rate_range = existing_rate_ranges[rate_range_id]
+                for key, value in rate_range_data.items():
+                    setattr(rate_range, key, value)
+                rate_range.save()
+            else:
+                # Create new RateRange
+                RateRange.objects.create(motor_insurance=instance, **rate_range_data)
+
+        # Delete RateRanges that were not included in the update
+        updated_rate_range_ids = [rate_range_data.get('id') for rate_range_data in rate_ranges_data if rate_range_data.get('id')]
+        for rate_range_id, rate_range in existing_rate_ranges.items():
+            if rate_range_id not in updated_rate_range_ids:
+                rate_range.delete()
+
+    def update_excess_charges(self, instance, excess_charges_data):
+        # Get existing excess charges for the motor insurance
+        existing_excess_charges = {excess_charge.id: excess_charge for excess_charge in instance.excess_charges.all()}
+
+        for excess_charge_data in excess_charges_data:
+            excess_charge_id = excess_charge_data.get('id', None)
+
+            if excess_charge_id and excess_charge_id in existing_excess_charges:
+                # Update existing ExcessCharges
+                excess_charge = existing_excess_charges[excess_charge_id]
+                for key, value in excess_charge_data.items():
+                    setattr(excess_charge, key, value)
+                excess_charge.save()
+            else:
+                # Create new ExcessCharges
+                ExcessCharges.objects.create(motor_insurance=instance, **excess_charge_data)
+
+        # Delete ExcessCharges that were not included in the update
+        updated_excess_charge_ids = [excess_charge_data.get('id') for excess_charge_data in excess_charges_data if excess_charge_data.get('id')]
+        for excess_charge_id, excess_charge in existing_excess_charges.items():
+            if excess_charge_id not in updated_excess_charge_ids:
+                excess_charge.delete()
 
     def delete(self,request,id):
         try:
