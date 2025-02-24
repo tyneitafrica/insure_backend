@@ -1323,7 +1323,6 @@ class EditMotorInsurance(APIView):
         }, status=status.HTTP_200_OK)
 
     def patch(self, request, id):
-
         motor_insurance = self.get_object(id)
         if isinstance(motor_insurance, Response):  # If the object was not found
             return motor_insurance
