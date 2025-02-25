@@ -517,7 +517,8 @@ class HealthInsuaranceSession(APIView):
             if new_lifestyle:
                 response_data= {
                     "firstname": firstname,
-                    "lastname": lastname,                    "national_id": national_id,
+                    "lastname": lastname, 
+                    "national_id": national_id,
                     "dob": dob,
                     "occupation": occupation,
                     "phone_number": phone_number,
@@ -594,7 +595,7 @@ class GetHealthInsuranceQuote(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-# ----------------------------------------------------------------- Upload insurance policy ----------------------------------------------------#
+# ----------------------------------------------------------------- Upload  Motor Insurance policy ----------------------------------------------------#
 class UploadMotorInsurance(APIView):
     
     def get(self, request):
@@ -618,7 +619,7 @@ class UploadMotorInsurance(APIView):
             if not motor_insurances.exists():
                 return Response({'message': 'No Motor insurance details found'}, status=status.HTTP_404_NOT_FOUND)
             
-            # Query OptionalExcessCharge if it exists
+            # # Query OptionalExcessCharge if it exists
             optional_excess_charges = OptionalExcessCharge.objects.filter(insurance__in=insurance_queryset)
             optional_serializer = AdditionalChargesSerializer(optional_excess_charges, many=True) if optional_excess_charges.exists() else None
 
@@ -629,6 +630,8 @@ class UploadMotorInsurance(APIView):
             response_data = {
                 'message': 'Motor insurance policies retrieved successfully',
                 'data': serializer.data,
+                
+
             }
 
             # Add optional excess charges to the response if they exist
@@ -1299,7 +1302,7 @@ class FilterInsuranceId(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        
+# ----------------------------------------------------------------- Edit Motor Insurance policy ----------------------------------------------------#     
 class EditMotorInsurance(APIView):
     def get_object(self, id):
         
@@ -1599,8 +1602,6 @@ class MarineInsuranceBenefits(APIView):
 
 
 # ----------------------------------------------------------------- GET QUOTE for Marine Insurance----------------------------------------------------#
-
-
 class CreateMarineInsuranceSession(APIView):
     def post(self, request):
         data = request.data
