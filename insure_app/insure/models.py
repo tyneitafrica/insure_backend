@@ -12,8 +12,11 @@ from datetime import date
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError
-from .utility import send_invoice_email, send_invoice_pay_failure_email, patch_policy
+from .utility import *
 from cloudinary_storage.storage import RawMediaCloudinaryStorage
+from django.contrib.auth.models import User
+import uuid
+from django.contrib.auth.models import User
 
 
 
@@ -406,45 +409,108 @@ class MotorInsuranceTempData(models.Model):
 
 
 
-# Marine Insurance Temporary Data Model
-class MarineInsuranceTempData(models.Model):
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
+# Marine Insurance Data Model
+class BasicInfo(models.Model):
+    ENTITY_TYPE_CHOICES = [
+        ('Individual', 'Individual'),
+        ('Company', 'Company'),
+    ]
+    full_name = models.CharField(max_length=100,null=True, blank=True)  #to be filled if individual
+    company_name = models.CharField(max_length=100, blank=True, null=True) #to be filled if company
+    registration_number = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField()
-    phone_number = models.CharField(max_length=20)
+    phone = models.CharField(max_length=20)
     id_no = models.CharField(max_length=20)
-    # Marine-specific details
-    vessel_type = models.CharField(max_length=100)  # e.g., Cargo Ship, Fishing Boat
-    coverage_type = models.CharField(max_length=100, choices=[
-        ('Hull Insurance', 'Hull Insurance'),
-        ('Cargo Insurance', 'Cargo Insurance'),
-        ('Freight Insurance', 'Freight Insurance'),
-    ])
-    is_evaluated = models.BooleanField(default=False)
-    evaluated_price = models.DecimalField(max_digits=100, decimal_places=2, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    kra_pin = models.CharField(max_length=20)                           
+    address = models.CharField(max_length=200)
+    city = models.CharField(max_length=100)
+    occupation = models.CharField(max_length=100) #represents the details of the person seeking the insurance
+    custom_occupation = models.CharField(max_length=100, blank=True, null=True)
+    coverage_type = models.CharField(max_length=50) #will bw passed based on the data provided by the frontend(steve)
+    custom_amount = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    entity_type = models.CharField(max_length=20, choices=ENTITY_TYPE_CHOICES)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} - {self.vessel_name}"
+        return f"{self.full_name} - {self.email}"
     
 
-# Marine Insurance Model
-class MarineInsurance(models.Model):
-    insurance = models.ForeignKey(Insurance, on_delete=models.CASCADE, related_name='marine_details')
-    vessel_type = models.CharField(max_length=100,choices=[
-        ('Fishing Boat', 'Fishing Boat'),
-        ('Cargo', 'Cargo'),
-        ('Yacht', 'Yacht'),        
-    ])  # e.g., Cargo Ship, Fishing Boat, Yacht
-    cargo_type = models.CharField(max_length=100,null=True,blank=True)  # e.g., General Cargo, Oil, Containers
-    voyage_type = models.CharField(max_length=100,null=True,blank=True)  # e.g., Coastal, International
-    coverage_type = models.CharField(max_length=100, choices=[
-        ('Hull Insurance', 'Hull Insurance'),
-        ('Cargo Insurance', 'Cargo Insurance'),
-        ('Freight Insurance', 'Freight Insurance'),    ])  # e.g., Hull Insurance, Cargo Insurance
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+class GoodsInfo(models.Model):
+    good_type = models.CharField(max_length=50) # eg perishable goods
+    sub_type = models.CharField(max_length=50) #eg flowers
+    quantity = models.CharField(max_length=50) # eg 10
+    unit = models.CharField(max_length=50) #eg kg,ltr
+    # packaging = models.CharField(max_length=50)
+    # packaging_spec = models.CharField(max_length=50)
+    # category = models.CharField(max_length=50)
+    good_value = models.DecimalField(max_digits=15, decimal_places=2) #value of the goods carried
+    description = models.TextField()
 
     def __str__(self):
-        return f"{self.vessel_type} - {self.coverage_type} - {self.price}"
+        return f"{self.good_type} - {self.sub_type}"
+    
 
+    def __str__(self):
+        return f"Base Premium: {self.base_premium}, Total Premium: {self.total_premium}"
+class ConveyanceInfo(models.Model):
+    TRANSPORT_MODE_CHOICES = [
+        ('Sea', 'Sea'),
+        ('Air', 'Air'),
+    ]
+    transport_mode = models.CharField(max_length=50, choices=TRANSPORT_MODE_CHOICES)
+    carrier_name = models.CharField(max_length=100,null=True, blank=True)
+    vessel_type = models.CharField(max_length=100,null=True, blank=True)
+    vessel_name = models.CharField(max_length=100,null=True, blank=True)
+    voyage_number = models.CharField(max_length=100,null=True, blank=True)
+    shipment_date = models.DateField()
+    arrival_date = models.DateField()
+    tracking_number = models.CharField(max_length=100,null=True,blank=True)
+    additional_details = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.vessel_name} - {self.voyage_number}"
+class TransitPoint(models.Model):
+    country = models.CharField(max_length=50,null=True,blank=True)
+    port = models.CharField(max_length=50,null=True,blank=True)
+    estimated_days = models.CharField(max_length=50,null=True,blank=True)
+
+    def __str__(self):
+        return f"{self.country} - {self.port}"
+
+class RouteInfo(models.Model):
+    origin_country = models.CharField(max_length=50) #represents country of origin 
+    origin_port = models.CharField(max_length=50)
+    destination_country = models.CharField(max_length=50)#represents country of destination
+    destination_port = models.CharField(max_length=50)
+    transit_points = models.ManyToManyField(TransitPoint) 
+    route_notes = models.TextField(null=True, blank=True) #no applicable unless required
+
+    def __str__(self):
+        return f"{self.origin_port} to {self.destination_port}"
+    
+
+class MarineInsuranceApplication(models.Model):
+    STATUS_CHOICES = [
+        ('Submitted', 'Submitted'),
+        ('Reviewed', 'Reviewed'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+        ('Cancelled', 'Cancelled')
+    ]
+    user =  models.ForeignKey(User, on_delete=models.CASCADE, related_name='marine_applications')
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='organisation applications')
+    basic_info = models.OneToOneField(BasicInfo, on_delete=models.CASCADE, related_name='marine_application')
+    goods_info = models.OneToOneField(GoodsInfo, on_delete=models.CASCADE, related_name='marine_application')
+    conveyance_info = models.OneToOneField(ConveyanceInfo, on_delete=models.CASCADE, related_name='marine_application')
+    route_info = models.OneToOneField(RouteInfo, on_delete=models.CASCADE, related_name='marine_application')
+    # benefits_info = models.OneToOneField(BenefitsInfo, on_delete=models.CASCADE, related_name='marine_application')
+    quote_reference = models.CharField(max_length=50, unique=True)
+    submission_date = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+
+    def gen_reference(self):
+        self.quote_reference = generate_marine_reference_number()
+        self.save()
+
+
+    def __str__(self):
+        return f"{self.quote_reference} - {self.status}"
