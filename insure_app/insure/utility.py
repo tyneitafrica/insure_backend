@@ -144,4 +144,19 @@ def create_invoice_id():
     invoice= f"#NL{digit}"
     return invoice
 
+def generate_marine_reference_number():
+    characters = string.ascii_letters + string.digits
+    # should start with nl
+    prefix = "NL"
+    # Generate 12 random characters
+    random_chars = ''.join(random.choices(characters, k=12))
+    # Concatenate prefix and random characters
+    marine_reference_number = prefix + random_chars
+    # print(marine_reference_number)
+    return marine_reference_number
+
+
+
+
+
 
