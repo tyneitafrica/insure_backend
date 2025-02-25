@@ -88,16 +88,16 @@ class BenefitsAdmin(admin.ModelAdmin):
 admin.site.register(Benefit, BenefitsAdmin)
 
 
-class MarineInsuranceTempAdmin(admin.ModelAdmin):
-    list_display = ("first_name","coverage_type")
-    search_fields = ("is_evaluated","coverage_type")
-    list_filter = search_fields
+# class MarineInsuranceTempAdmin(admin.ModelAdmin):
+#     list_display = ("first_name","coverage_type")
+#     search_fields = ("is_evaluated","coverage_type")
+#     list_filter = search_fields
 
-admin.site.register(MarineInsuranceTempData,MarineInsuranceTempAdmin)
+# admin.site.register(MarineInsuranceTempData,MarineInsuranceTempAdmin)
 
-class MarineInsuraneAdmin(admin.ModelAdmin):
-    list_display = ("insurance","vessel_type")
-    search_fields = ("vessel_type","coverage_type")
-    list_filter = search_fields
+# class MarineInsuraneAdmin(admin.ModelAdmin):
+#     list_display = ("insurance","vessel_type")
+#     search_fields = ("vessel_type","coverage_type")
+#     list_filter = search_fields
 
-admin.site.register(MarineInsurance,MarineInsuraneAdmin)
+# admin.site.register(MarineInsurance,MarineInsuraneAdmin)

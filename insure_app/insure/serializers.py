@@ -173,17 +173,6 @@ class BenefitSerializer(serializers.ModelSerializer):
 
 
 
-
-class MarineInsuranceSerializer(serializers.ModelSerializer):
-    insurance = InsuranceSerializer(read_only=True)
-    benefits = BenefitSerializer(source='insurance.benefits', many=True, read_only=True)  # Fix here
-
-    class Meta:
-        model = MarineInsurance
-        fields = ['insurance','vessel_type','cargo_type','voyage_type','coverage_type','price','benefits']
-        read_only_fields = ('created_at', 'updated_at')
-
-
 class PaymentSerializer(serializers.ModelSerializer):
     policy= PolicySerializer(read_only=True)
 
