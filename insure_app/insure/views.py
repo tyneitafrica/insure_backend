@@ -1727,6 +1727,85 @@ class EditMotorInsurance(APIView):
 #         except Exception as e:
 #             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# # ----------------------------------------------------------------- Get Marine insurance policy quote ----------------------------------------------------#
+
+# step 1 upload personal information 
+class MarinePersonalInfo(APIView):
+    def post(self,request):
+        data = request.data
+        # basic information
+        entity_type = data.get("type")  #individual or company
+        full_name = data.get('full_name')
+        company_name = data.get('company_name')
+        registration_number = data.get('registration_number')
+        email = data.get('email')
+        phone = data.get('phone')
+        id_no = data.get('id_no')
+        kra_pin = data.get('kra_pin')
+        address = data.get('address')
+        city = data.get('city')
+        occupation = data.get('occupation')
+        custom_occupation = data.get('custom')
+        coverage_type = data.get('coverage_type')
+        # goods_information
+        types_of_goods = data.get('types_of_goods')
+        sub_type =  data.get('sub_type')
+        quantity = data.get('quantity')
+        unit = data.get('unit')
+        good_value = data.get('good_value')
+        description = data.get('description')
+        #conveyance information
+        transport_mode = data.get('transport_mode')
+        carrier_name = data.get('carrier_name')
+        vessel_type = data.get('vessel_type')
+        vessel_name = data.get('vessel_name')  
+        voyage_number  = data.get('voyage_number')
+        shipment_date = data.get('shipment_date')   
+        arrival_date = data.get('arrival_date')
+        tracking_number = data.get('tracking_number')
+        additional_details = data.get('additional_details')
+        # route information
+        origin_country = data.get('origin_country')
+        origin_port = data.get('origin_port')
+
+
+
+
+        try:
+            new_client = BasicInfo.objects.create(
+                entity_type=entity_type,
+                full_name=full_name,
+                company_name=company_name,
+                registration_number=registration_number,
+                email=email,
+                phone=phone,
+                id_no=id_no,
+                kra_pin=kra_pin,
+                address=address,
+                city=city,
+                occupation=occupation,
+                custom_occupation=custom_occupation,
+                coverage_type=coverage_type,
+            )
+
+            response = Response()
+            response.set_cookie(
+                key="marine_personal_info",
+                value=new_client.id,
+                httponly=True,
+                samesite='None',
+                secure=False,
+                max_age=3600  # 1 hour
+            )
+            return response
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+
+
 
 
 #=============================Upload health insuarance policy---------------------------------------------------------------------------

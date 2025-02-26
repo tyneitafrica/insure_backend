@@ -427,7 +427,6 @@ class BasicInfo(models.Model):
     occupation = models.CharField(max_length=100) #represents the details of the person seeking the insurance
     custom_occupation = models.CharField(max_length=100, blank=True, null=True)
     coverage_type = models.CharField(max_length=50) #will bw passed based on the data provided by the frontend(steve)
-    custom_amount = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     entity_type = models.CharField(max_length=20, choices=ENTITY_TYPE_CHOICES)
 
     def __str__(self):
@@ -505,7 +504,7 @@ class MarineInsuranceApplication(models.Model):
     # benefits_info = models.OneToOneField(BenefitsInfo, on_delete=models.CASCADE, related_name='marine_application')
     quote_reference = models.CharField(max_length=50, unique=True)
     submission_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')      
 
     def gen_reference(self):
         self.quote_reference = generate_marine_reference_number()
