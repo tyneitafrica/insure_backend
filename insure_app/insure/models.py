@@ -379,28 +379,32 @@ def send_invoice_on_success(sender, instance, **kwargs):
 
 # to hold user data temporary   
 class MotorInsuranceTempData(models.Model):
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name="motor_insurance_temp_data")
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField()
     phone_number = models.CharField(max_length=20)
     id_no = models.CharField(max_length=20)
     yob = models.DateField()
-    age = models.IntegerField(default=0)
+    age = models.IntegerField(null=True,blank=True)
+    kra_number = models.CharField(max_length=20,null=True, blank=True)    
     # motor details
-    vehicle_category = models.CharField(max_length=100,choices=[('Private','Private'),('Commercial','Commercial'),('Public Service','Public Service')])
-    vehicle_type = models.CharField(max_length=100)
+    log_book_number = models.CharField(max_length=100)
+    licence_number = models.CharField(max_length=100)
+    vehicle_category = models.CharField(max_length=100)
     vehicle_model = models.CharField(max_length=100)
-    vehicle_year = models.IntegerField()
-    vehicle_age = models.IntegerField()
+    vehicle_year = models.IntegerField(null=True,blank=True)
+    vehicle_age = models.IntegerField(null=True,blank=True)
     vehicle_value = models.DecimalField(max_digits=100, decimal_places=2)
+    vehicle_registration_number = models.CharField(max_length=100)
+    cover_type  = models.CharField(max_length=100)
+    risk_name = models.CharField(max_length=100)    #represents the riskclass 
+    usage_category = models.CharField(max_length=100,null=True, blank=True)  
+    weight_category = models.CharField(max_length=100, null=True, blank=True) 
     cover_start_date = models.DateField()
     evaluated_price = models.DecimalField(max_digits=100,decimal_places=2,null=True,blank=True)
     vehicle_registration_number = models.CharField(max_length=100)
-    insurance_type = models.CharField(max_length=50,
-    choices=[
-        ('comprehensive', 'Comprehensive'),
-        ('third_party', 'Third Party'),
-    ])
+    insurance_type = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

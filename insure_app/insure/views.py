@@ -299,10 +299,12 @@ class CreateMotorInsuranceSession(APIView):
         gender = data.get('gender')
         id_no = data.get('id')
         phoneNumber = data.get('phoneNumber')
+        kra_pin = data.get('kra_pin')
         
         # Vehicle information
+        logbook_number = data.get("logbook_number")
+        licence_no = data.get("licence_no")
         vehicle_category = data.get('vehicle_category') #Private,bus,commercial etc...
-        vehicle_type = data.get('vehicle_type') #saloon
         vehicle_make = data.get('vehicle_make') # hachback et
         vehicle_model = data.get('vehicle_model') # probox,n-series,f-series
         vehicle_year = data.get('vehicle_year') # 2017,2016 
@@ -315,6 +317,7 @@ class CreateMotorInsuranceSession(APIView):
         usage_category = data.get('usage_category')
         weight_category = data.get('weight_category')
         selected_excess_charge = data.get("excess_charge")
+
 
         # def calculate_user_age(yob):
         #     if isinstance(yob, str):  # Check if yob is a string
@@ -342,11 +345,11 @@ class CreateMotorInsuranceSession(APIView):
                 "email": email,
                 # "age": calculate_user_age(yob) ,
                 "id_no": id_no,
+                "kra_pin": kra_pin,
                 "occupation": occupation,
                 "gender": gender,
                 "phoneNumber": phoneNumber,
                 "vehicle_category": vehicle_category,
-                "vehicle_type": vehicle_type,
                 "vehicle_make": vehicle_make,
                 "vehicle_model": vehicle_model,
                 "vehicle_year": vehicle_year,
@@ -359,7 +362,9 @@ class CreateMotorInsuranceSession(APIView):
                 "risk_name":risk_name,
                 "usage_category":usage_category,
                 "weight_category":weight_category,
-                "excess_charge":selected_excess_charge
+                "excess_charge":selected_excess_charge,
+                "licence_no":licence_no,
+                "logbook_number":logbook_number
             }
             # print(user_details)
             # Serialize the dictionary to JSON
@@ -906,7 +911,6 @@ class FilterMotorInsurance(APIView):
             user_details = json.loads(user_details_json)
             
             # Extract filter parameters from the cookie
-            vehicle_type = user_details.get('vehicle_type')  # e.g., Private, Commercial, Public Service
             vehicle_model = user_details.get('vehicle_model')  # e.g., Probox, Sienta
             cover_type = user_details.get('cover_type')  # e.g., Comprehensive, Third Party Only
             vehicle_value = user_details.get('vehicle_value')  # e.g., 4,500,000
@@ -1052,7 +1056,7 @@ class FilterMotorInsurance(APIView):
 
             # create a new cookie with the updated data 
             user_details_json = json.dumps(user_details)
-            # print(user_details_json)
+            print(user_details_json)
 
             sign = Signer()
             signed_data = sign.sign(user_details_json)
@@ -1061,6 +1065,7 @@ class FilterMotorInsurance(APIView):
                 'message': 'Filtered motor insurance policies retrieved successfully',
                 'data': filtered_insurances_with_premiums,
             }, status=status.HTTP_200_OK)
+
             # print(response)
 
             response.set_cookie(
@@ -1071,6 +1076,12 @@ class FilterMotorInsurance(APIView):
                 secure=True,
                 max_age=3600, #expire 1hr
             )
+            # save the user details in the motortempdata to be retrived by organisation 
+
+            get_organisation = User.objects.filter(role=User.Role.ORGANISATION).first() #at the moment we have only one organisation registered
+            print(get_organisation)
+
+
 
             return response
         
