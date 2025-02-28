@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Marine Insurance Application</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Open+Sans:wght@300;400;600&display=swap');
+        
+        :root {
+            --primary-color: #1a5276;
+            --secondary-color: #2980b9;
+            --accent-color: #3498db;
+            --text-color: #2c3e50;
+            --light-gray: #ecf0f1;
+            --medium-gray: #bdc3c7;
+            --border-radius: 4px;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Open Sans', Arial, sans-serif;
+            color: var(--text-color);
+            line-height: 1.4;
+            padding: 15px;
+            max-width: 850px;
+            margin: 0 auto;
+            font-size: 11px;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+        
+        h1, h2, h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--primary-color);
+        }
+        
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--accent-color);
+        }
+        
+        h3 {
+            font-size: 12px;
+            font-weight: 500;
+            margin: 8px 0 5px;
+        }
+        
+        .document-number {
+            font-size: 11px;
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+        
+        .section {
+            margin-bottom: 15px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .info-item {
+            margin-bottom: 6px;
+        }
+        
+        .info-item label {
+            display: block;
+            font-weight: 600;
+            color: var(--secondary-color);
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        
+        .info-item p {
+            padding: 4px 6px;
+            background-color: var(--light-gray);
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 10px;
+        }
+        
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: left;
+            padding: 6px 8px;
+            font-weight: 600;
+        }
+        
+        th:first-child {
+            border-top-left-radius: var(--border-radius);
+        }
+        
+        th:last-child {
+            border-top-right-radius: var(--border-radius);
+        }
+        
+        td {
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+        
+        tr:nth-child(even) {
+            background-color: var(--light-gray);
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .footer {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 9px;
+            color: var(--medium-gray);
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+                font-size: 10px;
+            }
+            
+            .section {
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid var(--medium-gray);
+                margin-bottom: 10px;
+            }
+            
+            .info-grid {
+                gap: 8px;
+            }
+            
+            table {
+                font-size: 9px;
+            }
+        }
+        
+        /* Compact description column */
+        .description-col {
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Make certain columns narrower */
+        .narrow-col {
+            width: 15%;
+        }
+        
+        .date-col {
+            width: 10%;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-container">
+            <svg class="logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="200" fill="#1a5276" rx="10" ry="10"/>
+                <path d="M50 100 L150 100 M100 50 L100 150" stroke="white" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="100" cy="100" r="40" fill="none" stroke="white" stroke-width="8"/>
+                <path d="M60 60 L140 140 M60 140 L140 60" stroke="#3498db" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+            <div>
+                <h1>Marine Insurance Application</h1>
+                <div class="document-number">Quote No: {{reference_no }}</div>
+            </div>
+        </div>
+        <div>
+            <p><strong>Date:</strong> {{ current_date|date:"F d, Y" }}</p>
+        </div>
+    </div>
+    
+    <!-- Basic Information -->
+    <div class="section">
+        <h2>Basic Information</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Entity</label>
+                <p>{{ basic_info.entity_type|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Full Name</label>
+                <p>{{ basic_info.full_name|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Email Address</label>
+                <p>{{ basic_info.email|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Phone Number</label>
+                <p>{{ basic_info.phone|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Coverage Type</label>
+                <p>{{ basic_info.coverage_type|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Address</label>
+                <p>{{ basic_info.address|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>City</label>
+                <p>{{ basic_info.city|default:"Not provided" }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Conveyance Information</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Transport Mode</label>
+                <p>{{ conveyance_info.transport_mode|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Vessel Name</label>
+                <p>{{ conveyance_info.vessel_name|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Voyage Number</label>
+                <p>{{ conveyance_info.voyage_number|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Shipment Date</label>
+                <p>{{ conveyance_info.shipment_date|default:"Not provided" }}</p>
+            </div>
+            <div class="info-item">
+                <label>Arrival Date</label>
+                <p>{{ conveyance_info.arrival_date|default:"Not provided" }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Route Information -->
+    <div class="section">
+        <h2>Route Information</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Origin</label>
+                <p>{{ route_info.origin_country|default:"Not provided" }} ({{ route_info.origin_port|default:"Not provided" }})</p>
+            </div>
+            <div class="info-item">
+                <label>Destination</label>
+                <p>{{ route_info.destination_country|default:"Not provided" }} ({{ route_info.destination_port|default:"Not provided" }})</p>
+            </div>
+        </div>
+        
+        <h3>Transit Points</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>Port</th>
+                    <th>Est. Days</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transit_point in route_info.transit_points %}
+                <tr>
+                    <td>{{ transit_point.country|default:"Not provided" }}</td>
+                    <td>{{ transit_point.port|default:"Not provided" }}</td>
+                    <td>{{ transit_point.estimated_days|default:"Not provided" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">No transit points available.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Goods Information -->
+    <div class="section">
+        <h2>Goods Information</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th class="narrow-col">Type</th>
+                    <th class="narrow-col">Sub Type</th>
+                    <th class="narrow-col">Quantity</th>
+                    <th class="narrow-col">Value</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for good in goods_info %}
+                <tr>
+                    <td>{{ good.good_type|default:"Not provided" }}</td>
+                    <td>{{ good.sub_type|default:"Not provided" }}</td>
+                    <td>{{ good.quantity|default:"Not provided" }} {{ good.unit|default:"" }}</td>
+                    <td>{{ good.good_value|default:"Not provided" }}</td>
+                    <td class="description-col">{{ good.description|default:"Not provided" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No goods information available.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="footer">
+        <p>NYLOID Insurance Application | Generated on {{ current_date|date:"Y-m-d" }}</p>
+    </div>
+</body>
+</html>
