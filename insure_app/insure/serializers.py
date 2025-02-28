@@ -187,3 +187,54 @@ class ApplicantKYCSerializer(serializers.ModelSerializer):
         model = ApplicantKYC
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at') 
+
+
+class MotorInsuranceTempDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MotorInsuranceTempData
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+class BasicInformationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BasicInfo
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class GoodsInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GoodsInfo
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class ConveyanceInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConveyanceInfo
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class TransitPointSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = TransitPoint
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class RouteInfoSerializer(serializers.ModelSerializer):
+    transit_points = TransitPointSerializer(many=True, read_only=True)  # Include nested transit points
+    class Meta:
+        model = RouteInfo
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+class MarineInsuranceApplicationSerializer(serializers.ModelSerializer):
+    basic_info = BasicInformationSerializer()  
+    conveyance_info = ConveyanceInfoSerializer()  
+    route_info = RouteInfoSerializer()  
+    goods_info = GoodsInfoSerializer(many=True)  
+    class Meta:
+        model = MarineInsuranceApplication
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
