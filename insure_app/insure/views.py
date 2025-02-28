@@ -20,6 +20,13 @@ from requests.auth import HTTPBasicAuth
 import base64
 from django.http import JsonResponse
 from cloudinary.uploader import upload
+from django.template.loader import render_to_string
+from django_weasyprint import WeasyTemplateResponse
+from django_weasyprint.views import WeasyTemplateResponseMixin
+from weasyprint import HTML
+from datetime import datetime
+
+
 
 
 # Create your views here.
@@ -343,6 +350,7 @@ class CreateMotorInsuranceSession(APIView):
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
+                "yob":yob,
                 # "age": calculate_user_age(yob) ,
                 "id_no": id_no,
                 "kra_pin": kra_pin,
@@ -900,7 +908,7 @@ class MotorInsuranceBenefits(APIView):
 class FilterMotorInsurance(APIView):
     def get(self, request):
         try:
-            # Retrieve and decode the cookie
+        # Retrieve and decode the cookie
             signed_data = request.COOKIES.get('user_motor_details')  # Retrieves the user data previously stored in the cookie
             if not signed_data:
                 return Response({'error': 'No session data found in cookies here '}, status=status.HTTP_400_BAD_REQUEST)
@@ -1056,7 +1064,7 @@ class FilterMotorInsurance(APIView):
 
             # create a new cookie with the updated data 
             user_details_json = json.dumps(user_details)
-            print(user_details_json)
+            # print(user_details_json)
 
             sign = Signer()
             signed_data = sign.sign(user_details_json)
@@ -1078,13 +1086,37 @@ class FilterMotorInsurance(APIView):
             )
             # save the user details in the motortempdata to be retrived by organisation 
 
+
+            # Convert date strings to date objects
+            
             get_organisation = User.objects.filter(role=User.Role.ORGANISATION).first() #at the moment we have only one organisation registered
-            print(get_organisation)
-
-
+            org_id = Organisation.objects.get(user=get_organisation)
+            
+            MotorInsuranceTempData.objects.create(
+                organisation=org_id,
+                first_name=user_details.get('first_name'),
+                last_name=user_details.get('last_name'),
+                email=user_details.get('email'),
+                phone_number=user_details.get('phoneNumber'),
+                id_no=user_details.get('id_no'),
+                yob=user_details.get('yob'),
+                kra_number=user_details.get('kra_pin'),
+                log_book_number=user_details.get('logbook_number'),
+                licence_number=user_details.get('licence_no'),
+                vehicle_category=user_details.get('vehicle_category'),
+                vehicle_model=user_details.get('vehicle_model'),
+                vehicle_year=user_details.get('vehicle_year'),
+                vehicle_value=user_details.get('vehicle_value'),
+                vehicle_registration_number=user_details.get('vehicle_registration_number'),
+                cover_type=user_details.get('cover_type'),
+                risk_name=user_details.get('risk_name'),
+                usage_category=user_details.get('usage_category'),
+                weight_category=user_details.get('weight_category'),
+                cover_start_date=user_details.get('cover_start_date'),
+                insurance_type=insurance_type
+            )
 
             return response
-        
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1436,6 +1468,36 @@ class EditMotorInsurance(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 
+# ----------------------------------------------------------------- Get Users Motor temp model  ----------------------------------------------------#     
+
+class GetMotorInsuranceUsers(APIView):
+    def get(self,request):
+        try:
+            user = get_user_from_token(request)
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # # Retrieve organisation associated with the user
+            organisation = get_organisation_from_user(user)
+            # print(organisation)
+
+            org_temp = MotorInsuranceTempData.objects.filter(organisation=organisation).order_by("-created_at")
+            if not org_temp.exists():
+                return Response({'message': 'No Motor insurance temp data found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = MotorInsuranceTempDataSerializer(org_temp, many=True)
+
+            return Response({
+                'message': 'Motor insurance temp data retrieved successfully',
+                'data': serializer.data,
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        
+
 # # ----------------------------------------------------------------- Upload Marine insurance policy ----------------------------------------------------#
 # # step 1
 # class MarineInsuranceUpload(APIView):
@@ -1739,81 +1801,150 @@ class EditMotorInsurance(APIView):
 #             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 # # ----------------------------------------------------------------- Get Marine insurance policy quote ----------------------------------------------------#
-
-# step 1 upload personal information 
-class MarinePersonalInfo(APIView):
-    def post(self,request):
+class MarineInsuranceApplicationView(APIView):
+    def post(self, request):
         data = request.data
-        # basic information
-        entity_type = data.get("type")  #individual or company
-        full_name = data.get('full_name')
-        company_name = data.get('company_name')
-        registration_number = data.get('registration_number')
-        email = data.get('email')
-        phone = data.get('phone')
-        id_no = data.get('id_no')
-        kra_pin = data.get('kra_pin')
-        address = data.get('address')
-        city = data.get('city')
-        occupation = data.get('occupation')
-        custom_occupation = data.get('custom')
-        coverage_type = data.get('coverage_type')
-        # goods_information
-        types_of_goods = data.get('types_of_goods')
-        sub_type =  data.get('sub_type')
-        quantity = data.get('quantity')
-        unit = data.get('unit')
-        good_value = data.get('good_value')
-        description = data.get('description')
-        #conveyance information
-        transport_mode = data.get('transport_mode')
-        carrier_name = data.get('carrier_name')
-        vessel_type = data.get('vessel_type')
-        vessel_name = data.get('vessel_name')  
-        voyage_number  = data.get('voyage_number')
-        shipment_date = data.get('shipment_date')   
-        arrival_date = data.get('arrival_date')
-        tracking_number = data.get('tracking_number')
-        additional_details = data.get('additional_details')
-        # route information
-        origin_country = data.get('origin_country')
-        origin_port = data.get('origin_port')
-
-
-
 
         try:
-            new_client = BasicInfo.objects.create(
-                entity_type=entity_type,
-                full_name=full_name,
-                company_name=company_name,
-                registration_number=registration_number,
-                email=email,
-                phone=phone,
-                id_no=id_no,
-                kra_pin=kra_pin,
-                address=address,
-                city=city,
-                occupation=occupation,
-                custom_occupation=custom_occupation,
-                coverage_type=coverage_type,
-            )
+            with transaction.atomic():  # Ensure all operations are atomic
+                # Step 1: Create BasicInfo
+                basic_info = BasicInfo.objects.create(
+                    entity_type=data.get("type"),
+                    full_name=data.get('full_name'),
+                    company_name=data.get('company_name'),
+                    registration_number=data.get('registration_number'),
+                    email=data.get('email'),
+                    phone=data.get('phone'),
+                    id_no=data.get('id_no'),
+                    kra_pin=data.get('kra_pin'),
+                    address=data.get('address'),
+                    city=data.get('city'),
+                    occupation=data.get('occupation'),
+                    custom_occupation=data.get('custom'),
+                    coverage_type=data.get('coverage_type'),
+                )
 
-            response = Response()
-            response.set_cookie(
-                key="marine_personal_info",
-                value=new_client.id,
-                httponly=True,
-                samesite='None',
-                secure=False,
-                max_age=3600  # 1 hour
-            )
-            return response
+                # Step 2: Create multiple GoodsInfo instances
+                goods_data = data.get('goods', [])  # Expecting an array of goods
+                goods_info_instances = []
+                for good_data in goods_data:
+                    goods_info = GoodsInfo.objects.create(
+                        good_type=good_data.get('good_type'),
+                        sub_type=good_data.get('sub_type'),
+                        quantity=good_data.get('quantity'),
+                        unit=good_data.get('unit'),
+                        good_value=good_data.get('good_value'),
+                        description=good_data.get('description'),
+                    )
+                    goods_info_instances.append(goods_info)
+
+
+                # Step 3: Create ConveyanceInfo
+                conveyance_info = ConveyanceInfo.objects.create(
+                    transport_mode=data.get('transport_mode'),
+                    carrier_name=data.get('carrier_name'),
+                    vessel_type=data.get('vessel_type'),
+                    vessel_name=data.get('vessel_name'),
+                    voyage_number=data.get('voyage_number'),
+                    shipment_date=data.get('shipment_date'),
+                    arrival_date=data.get('arrival_date'),
+                    tracking_number=data.get('tracking_number'),
+                    additional_details=data.get('additional_details'),
+                )
+
+                # Step 4: Create RouteInfo and TransitPoints
+                route_info = RouteInfo.objects.create(
+                    origin_country=data.get('origin_country'),
+                    origin_port=data.get('origin_port'),
+                    destination_country=data.get('destination_country'),
+                    destination_port=data.get('destination_port'),
+                    route_notes=data.get('route_notes'),
+                )
+
+                # Add TransitPoints to RouteInfo (if any)
+                transit_points_data = data.get('transit_points', [])
+                for transit_point_data in transit_points_data:
+                    transit_point = TransitPoint.objects.create(
+                        country=transit_point_data.get('country'),
+                        port=transit_point_data.get('port'),
+                        estimated_days=transit_point_data.get('estimated_days'),
+                    )
+                    route_info.transit_points.add(transit_point)
+
+                get_organisation = User.objects.filter(role=User.Role.ORGANISATION).first() #at the moment we have only one organisation registered
+                org_id = Organisation.objects.get(user=get_organisation)
+                
+                
+                # Step 5: Create MarineInsuranceApplication (without user)
+                marine_application = MarineInsuranceApplication.objects.create(
+                    user=None,  # User is not logged in
+                    organisation=org_id,  # Organisation is not linked yet
+                    basic_info=basic_info,
+                    conveyance_info=conveyance_info,
+                    route_info=route_info,
+                    status='Submitted',
+                )
+                marine_application.gen_reference()  # Generate the quote reference
+
+                # Link multiple GoodsInfo instances to MarineInsuranceApplication
+                marine_application.goods_info.set(goods_info_instances)
+
+                # Step 6: Serialize and return the response
+                serializer = MarineInsuranceApplicationSerializer(marine_application)
+                
+                return Response({
+                    'message': 'Marine insurance application created successfully',
+                    'data': serializer.data,
+                }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response ({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)
         
 
+# # ----------------------------------------------------------------- Generate pdf for created quote quote ----------------------------------------------------#
+
+class GenerateMarineInsurancePDF(APIView):
+    def get(self, request, id):
+        try:
+            application = MarineInsuranceApplication.objects.get(id=id)
+            context = {
+                'basic_info': application.basic_info,
+                'goods_info': application.goods_info.all(),  # Already resolved
+                'conveyance_info': application.conveyance_info,
+                'route_info': {
+                    'origin_country': application.route_info.origin_country,
+                    'origin_port': application.route_info.origin_port,
+                    'destination_country': application.route_info.destination_country,
+                    'destination_port': application.route_info.destination_port,
+                    'transit_points': application.route_info.transit_points.all(),  # Resolve the queryset
+                    'route_notes': application.route_info.route_notes,
+                },
+                'current_date': datetime.now(),
+                'reference_no':application.quote_reference
+            }
+            print(application.route_info.transit_points.all())  # Check if transit points are fetched correctly
+            # print(context)  # Debugging: Print context data
+
+            # Render the template
+            try:
+                html_content = render_to_string("emails/marineInsurance.html", context)
+            except TemplateDoesNotExist as e:
+                return Response({'error': f'Template not found: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                return Response({'error': f'Template rendering error: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Generate the PDF
+            response = WeasyTemplateResponse(
+                request=request,
+                template='emails/marineInsurance.html',
+                context=context,
+                filename=f"marine_insurance.pdf",
+                content_type='application/pdf',
+            )
+            return response
+
+        except MarineInsuranceApplication.DoesNotExist:
+            return Response({'error': 'Marine insurance application not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 
