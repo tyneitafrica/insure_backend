@@ -54,10 +54,12 @@ urlpatterns = [
     path("api/v1.0/motorinsurance/<int:id>/", EditMotorInsurance.as_view(), name="edit motor insurance"), #will handle the patch and delete of motor insurance
     path("api/v1.0/motorinsurance/optionalcharges/", Additionalcharge.as_view(), name="add optional charges motor insurance"), #will handle the patch and delete of motor insurance
     path("api/v1.0/motorinsurance/filter/<int:id>/",FilterInsuranceId.as_view(), name="filter insurance by id"),
+    path("api/v1.0/motorinsurance/users/quotes/", GetMotorInsuranceUsers.as_view(), name="organisation filtered users"), #to be used to get users who had enquired about a quote
+
 
 # #    upload marine section 
-#     path("api/v1.0/applicant/marine_session/", CreateMarineInsuranceSession.as_view(), name="create insurance session"),
-#     path("api/v1.0/marineinsurance/", MarineInsuranceUpload.as_view(), name="create  marine insurance step 1"),  
+    path("api/v1.0/applicant/marine/quote/", MarineInsuranceApplicationView.as_view(), name="applicant creates marine insurance quote"),
+    path("api/v1.0/marineinsurance/pdf/<int:id>/", GenerateMarineInsurancePDF.as_view(), name="download marine insurance pdf "),  
 #     path("api/v1.0/marineinsurance/details/", MarineInsuranceDetails.as_view(), name="create marine insurance step 2"),
 #     path("api/v1.0/marineinsurance/benefits/", MarineInsuranceBenefits.as_view(), name="create marine insurance step3 "),
 #     path("api/v1.0/marineinsurance/filter/",FilterMarineInsurance.as_view(), name="filter marine insurance"),
