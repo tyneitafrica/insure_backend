@@ -385,16 +385,14 @@ class MotorInsuranceTempData(models.Model):
     email = models.EmailField()
     phone_number = models.CharField(max_length=20)
     id_no = models.CharField(max_length=20)
-    yob = models.DateField()
-    age = models.IntegerField(null=True,blank=True)
+    yob = models.DateField(null=True, blank=True)
     kra_number = models.CharField(max_length=20,null=True, blank=True)    
     # motor details
-    log_book_number = models.CharField(max_length=100)
-    licence_number = models.CharField(max_length=100)
+    log_book_number = models.CharField(max_length=100,null=True,blank=True)
+    licence_number = models.CharField(max_length=100,null=True, blank=True)
     vehicle_category = models.CharField(max_length=100)
     vehicle_model = models.CharField(max_length=100)
     vehicle_year = models.IntegerField(null=True,blank=True)
-    vehicle_age = models.IntegerField(null=True,blank=True)
     vehicle_value = models.DecimalField(max_digits=100, decimal_places=2)
     vehicle_registration_number = models.CharField(max_length=100)
     cover_type  = models.CharField(max_length=100)
@@ -402,8 +400,6 @@ class MotorInsuranceTempData(models.Model):
     usage_category = models.CharField(max_length=100,null=True, blank=True)  
     weight_category = models.CharField(max_length=100, null=True, blank=True) 
     cover_start_date = models.DateField()
-    evaluated_price = models.DecimalField(max_digits=100,decimal_places=2,null=True,blank=True)
-    vehicle_registration_number = models.CharField(max_length=100)
     insurance_type = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -434,7 +430,7 @@ class BasicInfo(models.Model):
     entity_type = models.CharField(max_length=20, choices=ENTITY_TYPE_CHOICES)
 
     def __str__(self):
-        return f"{self.full_name} - {self.email}"
+        return f"{self.full_name} - {self.email} - {self.phone} - {self.coverage_type} - {self.entity_type} - {self.address} - {self.city}"
     
 
 class GoodsInfo(models.Model):
@@ -449,11 +445,7 @@ class GoodsInfo(models.Model):
     description = models.TextField()
 
     def __str__(self):
-        return f"{self.good_type} - {self.sub_type}"
-    
-
-    def __str__(self):
-        return f"Base Premium: {self.base_premium}, Total Premium: {self.total_premium}"
+        return f"{self.good_type} - {self.sub_type} -  {self.good_value} - {self.description} {self.unit} {self.quantity} "
 class ConveyanceInfo(models.Model):
     TRANSPORT_MODE_CHOICES = [
         ('Sea', 'Sea'),
@@ -470,14 +462,14 @@ class ConveyanceInfo(models.Model):
     additional_details = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.vessel_name} - {self.voyage_number}"
+        return f"{self.vessel_name} - {self.voyage_number} {self.transport_mode} {self.shipment_date} {self.arrival_date}"
 class TransitPoint(models.Model):
     country = models.CharField(max_length=50,null=True,blank=True)
     port = models.CharField(max_length=50,null=True,blank=True)
     estimated_days = models.CharField(max_length=50,null=True,blank=True)
 
     def __str__(self):
-        return f"{self.country} - {self.port}"
+        return f"{self.country} - {self.port} {self.estimated_days}"
 
 class RouteInfo(models.Model):
     origin_country = models.CharField(max_length=50) #represents country of origin 
@@ -488,7 +480,7 @@ class RouteInfo(models.Model):
     route_notes = models.TextField(null=True, blank=True) #no applicable unless required
 
     def __str__(self):
-        return f"{self.origin_port} to {self.destination_port}"
+        return f"{self.origin_port} to {self.destination_port} {self.origin_country} {self.destination_country} {self.transit_points} {self.route_notes}"
     
 
 class MarineInsuranceApplication(models.Model):
@@ -499,10 +491,10 @@ class MarineInsuranceApplication(models.Model):
         ('Rejected', 'Rejected'),
         ('Cancelled', 'Cancelled')
     ]
-    user =  models.ForeignKey(User, on_delete=models.CASCADE, related_name='marine_applications')
+    user =  models.ForeignKey(User, on_delete=models.CASCADE, related_name='marine_applications',null=True,blank=True)
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE)
     basic_info = models.OneToOneField(BasicInfo, on_delete=models.CASCADE, related_name='marine_app')
-    goods_info = models.OneToOneField(GoodsInfo, on_delete=models.CASCADE, related_name='marine_appliion')
+    goods_info = models.ManyToManyField(GoodsInfo, related_name='marine_appliion')
     conveyance_info = models.OneToOneField(ConveyanceInfo, on_delete=models.CASCADE, related_name='marine_appion')
     route_info = models.OneToOneField(RouteInfo, on_delete=models.CASCADE, related_name='marine_applicion')
     # benefits_info = models.OneToOneField(BenefitsInfo, on_delete=models.CASCADE, related_name='marine_application')
@@ -516,4 +508,4 @@ class MarineInsuranceApplication(models.Model):
 
 
     def __str__(self):
-        return f"{self.quote_reference} - {self.status}"
+        return f"{self.quote_reference} - {self.status} {self.basic_info}  {self.conveyance_info} {self.route_info} {self.submission_date}"
